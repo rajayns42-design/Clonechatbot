@@ -1,8 +1,0 @@
-python-telegram-bot
-google-generativeai
-groq
-mistralai
-python-dotenv
-pymongo
-dnspython
-httpx
