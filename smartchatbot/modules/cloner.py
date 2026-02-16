@@ -1,8 +1,9 @@
 import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-# Hamara wahi multi-api aur flirty logic import ho raha hai
+# Hamare main modules se powers le rahe hain
 from modules.chatbot import chatbot_reply, chatbot_toggle 
+from modules.welcome import welcome_toggle, welcome_member 
 from config import API_ID, API_HASH
 
 # Clone bots ko track karne ke liye cache
@@ -18,47 +19,57 @@ async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         # 1. Naya Bot Application Build karna
-        # Yahan humne 'JobQueue' ko False rakha hai taki clones light-weight rahein
         app = Application.builder().token(bot_token).build()
 
-        # 2. Saare Same Handlers Register karna (Unlimited Power)
+        # 2. START HANDLER (Ab ye bhi add ho gaya)
         app.add_handler(CommandHandler("start", clone_start_handler))
-        app.add_handler(CommandHandler("chatbot", chatbot_toggle)) # Group ON/OFF switch
-        
-        # Unlimited Reply Logic (Teno APIs: Gemini, Groq, Mistral)
+
+        # 3. UNLIMITED CHAT LOGIC (Triple API Power)
+        app.add_handler(CommandHandler("chatbot", chatbot_toggle))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply))
 
-        # 3. Bot ko Background mein Polling par dalna
+        # 4. NAME + USERNAME WELCOME LOGIC
+        app.add_handler(CommandHandler("welcome", welcome_toggle))
+        app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member))
+
+        # 5. Bot ko Background mein Chalana
         await app.initialize()
         await app.start()
         await app.updater.start_polling()
 
-        # Save clone in memory
+        # Cache mein save karna
         CLONES[user_id] = app
         
         await update.message.reply_text(
             "✅ **Mubarak ho baby!**\n\n"
-            "Aapka clone bot ab redy.\n"
-            "➜ Private mein unlimited chat karega.\n"
-            "➜ Groups mein `/chatbot on` karke maze lo! 😉"
+            "Aapka clone bot ab **Full Power** ke saath ready hai.\n"
+            "➜ Har cheez Master bot jaisi chalegi.\n"
+            "➜ `/chatbot` aur `/welcome` dono switches ready hain! 😉"
         )
 
     except Exception as e:
         print(f"Clone Error: {e}")
-        await update.message.reply_text("❌ **Ofo!** Token galat hai ya Telegram ke nakhre hain. Phir se check karo!")
+        await update.message.reply_text("❌ **Ofo!** Token galat hai ya bot thak gaya hai.")
 
-# --- Clone Bot Specific Start ---
+# --- Clone Bot Start Message ---
 async def clone_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     bot_name = context.bot.first_name
     
-    # Ek real flirty welcome message clone bot ke liye
     welcome_msg = (
-        f"𝖧𝖾𝗒 {user.first_name}! ✨\n"
-        f"𝖨'𝗆 **{bot_name}**, tumhara naya flirty AI dost.\n\n"
-        "➜ Mujhse private mein jitni chahe baatein karo, main kabhi nahi thakti! 💋\n"
-        "➜ Mujhe apne groups mein add karo aur `/chatbot on` likho.\n\n"
-        "**Chalo, ab kuch pyaari baatein shuru karein? 😉**"
+ f"𝖧𝖾𝗒 {user.first_name} ✨\n"
+        f"𝖨'𝗆 **{bot_name}**\n\n"
+        f"๏ **𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?**\n"
+        f"➜ 𝖨’𝗆 𝖠 𝖲𝗆𝖺𝗋𝗍 𝖠𝖨 𝖢𝗁𝖺𝗍 𝖠𝗌𝗌𝗂𝗌𝗍𝖺𝗇𝗍\n"
+        f"➜ 𝖧𝗎𝗆𝖺𝗇-𝖫𝗂𝗄𝖾 𝖢𝗈𝗇𝗏𝖾𝗋𝗌𝖺𝗍𝗂𝗈𝗇𝗌\n"
+        f"➜ 𝖬𝗎𝗅𝗍𝗂 𝖫𝖺𝗇𝗀𝗎𝖺𝗀𝖾 𝖲𝗎𝗉𝗉𝗈𝗋𝗍\n"
+        f"➜ 𝖶𝗂𝗍𝗁 𝖴𝗇𝗅𝗂𝗆𝗂𝗍𝖾𝖽 `/clone` 𝖥𝖾𝖺𝗍𝗎𝗋𝖾𝗌\n"
+        f"➜ 𝟤𝟦𝗑𝟩 𝖥𝖺𝗌𝗍 𝖱𝖾𝗌𝗉𝗈𝗇𝗌𝖾\n\n"
+        f"๏ **𝗛𝗼𝘄 𝗧𝗼 𝗨𝘀𝗲 𝗠𝗲 ?**\n"
+        f"➜ 𝖠𝖽𝖽 𝖬𝖾 𝖳𝗈 𝖸𝗈𝗎𝗋 𝖦𝗋𝗈𝗎𝗉\n"
+        f"➜ 𝖴𝗌𝖾 `/chatbot on` 𝖳𝗈 𝖤𝗇𝖺𝖻𝗅𝖾\n"
+        f"➜ 𝖴𝗌𝖾 `/chatbot off` 𝖳𝗈 𝖣𝗂𝗌𝖺𝖻𝗅𝖾\n\n"
+        f"➜ 𝖢𝗅𝗂𝖼𝗄 𝖳𝗁𝖾 𝖧𝖾𝗅𝗉 𝖡𝗎𝗍𝗍𝗈𝗇 𝖥𝗈𝗋 𝖬𝗈𝗋𝖾 𝖢𝗈𝗆𝗆𝖺𝗇𝖽𝗌 💜"
     )
     
     await update.message.reply_text(welcome_msg, parse_mode='Markdown')
