@@ -1,12 +1,26 @@
-import pymongo
-import os
+from pymongo import MongoClient
 from config import MONGO_URL
 
-# Connection setup
-client = pymongo.MongoClient(MONGO_URL)
-db = client["smartbot_db"]
-clones = db["cloned_bots"]
+client = MongoClient(MONGO_URL)
+db = client.natkhat_bot
+clones_collection = db["cloned_bots"] # Naya collection clones ke liye
 
+# --- Chat & Welcome Status Functions ---
+def set_chat_status(chat_id, status: bool):
+    db.chats.update_one({"chat_id": chat_id}, {"$set": {"bot_on": status}}, upsert=True)
+
+def get_chat_status(chat_id):
+    chat = db.chats.find_one({"chat_id": chat_id})
+    return chat.get("bot_on", True) if chat else True
+
+def set_welcome_status(chat_id, status: bool):
+    db.chats.update_one({"chat_id": chat_id}, {"$set": {"welcome_on": status}}, upsert=True)
+
+def get_welcome_status(chat_id):
+    chat = db.chats.find_one({"chat_id": chat_id})
+    return chat.get("welcome_on", True) if chat else True
+
+# --- New: Clone Bot Persistence Functions ---
 def add_cloned_bot(user_id, token, username):
     data = {
         "user_id": user_id,
@@ -14,11 +28,10 @@ def add_cloned_bot(user_id, token, username):
         "username": username,
         "status": "active"
     }
-    # Agar token pehle se hai toh update karein, nahi toh insert
-    clones.update_one({"token": token}, {"$set": data}, upsert=True)
-    print(f"✅ Bot saved in Cloud: {username}")
+    clones_collection.update_one({"token": token}, {"$set": data}, upsert=True)
 
 def get_all_bots():
-    all_bots = clones.find({"status": "active"})
-    return [bot["token"] for bot in all_bots]
+    return list(clones_collection.find({"status": "active"}))
 
+def remove_cloned_bot(token):
+    clones_collection.delete_one({"token": token})
