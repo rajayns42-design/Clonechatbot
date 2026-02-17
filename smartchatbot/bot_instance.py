@@ -1,7 +1,7 @@
 import sys
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes, ChatMemberHandler
-from config import LOGGER_GROUP
+from smartchatbot.config import LOGGER_GROUP
 from modules.ai_engine import get_combined_ai_response
 from modules.loggers import log_user_start, log_group_add
 
