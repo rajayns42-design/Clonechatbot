@@ -8,9 +8,9 @@ db = client.natkhat_bot
 chats_collection = db["chats"]
 clones_collection = db["cloned_bots"]
 warns_collection = db["user_warns"]
-sudo_collection = db["sudo_users"] # Restart ke baad Sudo powers na uden
+sudo_collection = db["sudo_users"] 
 
-# --- 1. Chat & Welcome Status (Data Safe) ---
+# --- 1. Chat & Welcome Status ---
 def set_chat_status(chat_id, status: bool):
     chats_collection.update_one({"chat_id": chat_id}, {"$set": {"bot_on": status}}, upsert=True)
 
@@ -25,33 +25,20 @@ def get_welcome_status(chat_id):
     chat = chats_collection.find_one({"chat_id": chat_id})
     return chat.get("welcome_on", True) if chat else True
 
-# --- 2. AI Model Selection ---
-def set_bot_ai(bot_id, model_name):
-    clones_collection.update_one({"bot_id": bot_id}, {"$set": {"ai_model": model_name}}, upsert=True)
+# --- 2. Broadcast Helper (Groups List) ---
+def get_all_chats():
+    """Broadcast ke liye saari unique group IDs nikalne ke liye"""
+    return chats_collection.find({}, {"chat_id": 1})
 
-def get_bot_ai(bot_id):
-    bot = clones_collection.find_one({"bot_id": bot_id})
-    return bot.get("ai_model", "gemini") if bot else "gemini"
+# --- 3. Sudo User Management ---
+def add_sudo(user_id):
+    sudo_collection.update_one({"user_id": user_id}, {"$set": {"is_sudo": True}}, upsert=True)
 
-# --- 3. Warn System (Persistent) ---
-def add_warn(chat_id, user_id):
-    warn_data = warns_collection.find_one({"chat_id": chat_id, "user_id": user_id})
-    new_count = (warn_data.get("count", 0) + 1) if warn_data else 1
-    warns_collection.update_one(
-        {"chat_id": chat_id, "user_id": user_id},
-        {"$set": {"count": new_count}},
-        upsert=True
-    )
-    return new_count
+def is_sudo(user_id):
+    user = sudo_collection.find_one({"user_id": user_id})
+    return bool(user)
 
-def reset_warns(chat_id, user_id):
-    warns_collection.delete_one({"chat_id": chat_id, "user_id": user_id})
-
-# --- 4. NEW: Boot Persistence (For Restart Safety) ---
-def save_bot_session(bot_id, session_data):
-    """Restart ke baad bot ka session yaha se load hoga"""
-    clones_collection.update_one({"bot_id": bot_id}, {"$set": {"session": session_data}}, upsert=True)
-
+# --- 4. Clone Bot Persistence ---
 def add_cloned_bot(user_id, token, username, bot_id):
     data = {
         "user_id": user_id,
@@ -60,12 +47,11 @@ def add_cloned_bot(user_id, token, username, bot_id):
         "bot_id": bot_id,
         "status": "active"
     }
-    # Upsert=True se data overwrite nahi hota balki update hota hai
     clones_collection.update_one({"token": token}, {"$set": data}, upsert=True)
 
 def get_all_bots():
-    """Ye main function hai jo restart pe saare tokens nikalega"""
     return list(clones_collection.find({"status": "active"}))
 
 def remove_cloned_bot(token):
+    # Data delete nahi hoga, bas status inactive ho jayega (Safe side)
     clones_collection.update_one({"token": token}, {"$set": {"status": "inactive"}})
