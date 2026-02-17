@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from config import MONGO_URL
+from smartchatbot.config import MONGO_URL
 
 client = MongoClient(MONGO_URL)
 db = client.natkhat_bot
