@@ -1,3 +1,4 @@
+
 import os
 import logging
 import asyncio
@@ -8,9 +9,10 @@ from config import TOKEN
 from database import get_all_bots
 from modules.chatbot import chatbot_reply, chatbot_toggle
 from modules.welcome import welcome_toggle, welcome_member
-from modules.cloner import clone_bot, clone_start_handler, anti_nsfw_delete
+# Cloner module se naya broadcast_handler aur delclone bhi import karein
+from modules.cloner import clone_bot, clone_start_handler, anti_nsfw_delete, broadcast_handler, delclone_bot
 
-# Admin Modules (Jo humne pehle banaye the)
+# Admin Modules
 from modules.admin import ban_user, unban_user, mute_user, unmute_user, promote_user, get_admin_list
 
 # Logging
@@ -18,11 +20,15 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 # --- Common Handler Registration ---
 def register_all_handlers(app: Application):
-    # 1. Start & Clone
+    # 1. Start, Clone & De-Clone
     app.add_handler(CommandHandler("start", clone_start_handler))
     app.add_handler(CommandHandler("clone", clone_bot))
+    app.add_handler(CommandHandler("delclone", delclone_bot))
 
-    # 2. Admin Commands (New Added)
+    # 2. Master-Only Broadcast (Sudo Logic inside cloner.py)
+    app.add_handler(CommandHandler("broadcast", broadcast_handler))
+
+    # 3. Admin Commands
     app.add_handler(CommandHandler("ban", ban_user))
     app.add_handler(CommandHandler("unban", unban_user))
     app.add_handler(CommandHandler("mute", mute_user))
@@ -30,15 +36,15 @@ def register_all_handlers(app: Application):
     app.add_handler(CommandHandler("promote", promote_user))
     app.add_handler(CommandHandler("adminlist", get_admin_list))
 
-    # 3. Chatbot Logic
+    # 4. Chatbot Logic
     app.add_handler(CommandHandler("chatbot", chatbot_toggle))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply))
 
-    # 4. Welcome Logic
+    # 5. Welcome Logic
     app.add_handler(CommandHandler("welcome", welcome_toggle))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member))
 
-    # 5. Anti-NSFW (Media Delete)
+    # 6. Anti-NSFW (Media Delete)
     app.add_handler(MessageHandler(
         (filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Sticker.ALL) & ~filters.COMMAND, 
         anti_nsfw_delete
@@ -54,14 +60,13 @@ async def restart_clones(main_app: Application):
     for bot_data in saved_bots:
         token = bot_data["token"]
         try:
-            # Har clone bot ke liye separate job_queue enable karna zaroori hai
+            # Har clone ke liye job_queue enable karna zaroori hai
             clone_app = Application.builder().token(token).job_queue(True).build()
             
             register_all_handlers(clone_app)
 
             await clone_app.initialize()
             await clone_app.start()
-            # Background polling for clones
             await clone_app.updater.start_polling()
             logging.info(f"✅ Successfully Reconnected: @{bot_data['username']}")
         except Exception as e:
@@ -69,18 +74,18 @@ async def restart_clones(main_app: Application):
 
 # --- Main Entry Point ---
 def main():
-    # Build Master Bot (job_queue=True is MUST)
+    # Build Master Bot
     app = Application.builder().token(TOKEN).job_queue(True).build()
 
     # Register handlers for Master Bot
     register_all_handlers(app)
 
-    # Database se purane clones ko auto-start karna
+    # Boot ke 5 second baad clones zinda karna
     if app.job_queue:
         app.job_queue.run_once(lambda c: restart_clones(app), 5)
 
     print("--- ⚡ NATKHAT AI SYSTEM IS LIVE ⚡ ---")
-    print("--- 🤖 ALL CLONES ARE PERSISTENT 🤖 ---")
+    print("--- 👤 BROADCAST: OWNER ONLY ENABLED ---")
     
     app.run_polling()
 
