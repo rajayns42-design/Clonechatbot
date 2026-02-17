@@ -1,0 +1,76 @@
+{
+  "name": "Natkhat AI Cloner",
+  "description": "The most complete AI Cloner bot with Gemini, Groq, Mistral and Master Broadcast.",
+  "repository": "https://github.com/yourusername/natkhat-ai",
+  "logo": "https://graph.org/file/your-logo.jpg",
+  "keywords": ["telegram", "bot", "ai", "cloner", "gemini", "groq", "mistral"],
+  "env": {
+    "TOKEN": {
+      "description": "Main Bot Token (@BotFather)",
+      "required": true
+    },
+    "MONGO_URL": {
+      "description": "MongoDB Atlas URL",
+      "required": true
+    },
+    "OWNER_ID": {
+      "description": "Aapki Numeric Telegram ID",
+      "required": true
+    },
+    "OWNER_USERNAME": {
+      "description": "Aapka Username (e.g. @Natkhat_Owner)",
+      "required": true,
+      "value": "@"
+    },
+    "API_ID": {
+      "description": "Telegram API ID (my.telegram.org)",
+      "required": true
+    },
+    "API_HASH": {
+      "description": "Telegram API HASH (my.telegram.org)",
+      "required": true
+    },
+    "START_IMG": {
+      "description": "Bot Start Image Link",
+      "required": true,
+      "value": "https://graph.org/file/746d048e9198642646c6b.jpg"
+    },
+    "SUPPORT_GROUP": {
+      "description": "Support Group Link",
+      "required": true,
+      "value": "https://t.me/"
+    },
+    "SUPPORT_CHANNEL": {
+      "description": "Update Channel Link",
+      "required": true,
+      "value": "https://t.me/"
+    },
+    "GEMINI_API_KEY": {
+      "description": "Google Gemini API Key",
+      "required": false
+    },
+    "GROQ_API_KEY": {
+      "description": "Groq Cloud API Key",
+      "required": false
+    },
+    "MISTRAL_API_KEY": {
+      "description": "Mistral AI API Key",
+      "required": false
+    },
+    "CLONE_LOGGER": {
+      "description": "Log Group ID (-100...)",
+      "required": false
+    },
+    "LOGGER_GROUP": {
+      "description": "Error Logs Group ID (-100...)",
+      "required": false
+    }
+  },
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "stack": "container"
+}
