@@ -5,7 +5,7 @@ from mistralai.client import MistralClient
 from telegram import Update
 from telegram.ext import ContextTypes
 from database import get_chat_status, set_chat_status, get_bot_ai
-from config import GEMINI_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY, OWNER_ID
+from smartchatbot.config import GEMINI_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY, OWNER_ID
 
 # --- 1. AI Configuration ---
 genai.configure(api_key=GEMINI_API_KEY)
