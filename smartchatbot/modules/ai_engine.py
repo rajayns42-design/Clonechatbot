@@ -2,7 +2,7 @@ import google.generativeai as genai
 from groq import Groq
 from mistralai.client import MistralClient
 import httpx # Iske liye 'pip install httpx' zaroori hai
-from config import GEMINI_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY
+from smartchatbot.config import GEMINI_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY
 
 async def fallback_ai(prompt):
     """
