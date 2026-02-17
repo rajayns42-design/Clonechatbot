@@ -16,10 +16,10 @@ from config import (
 )
 
 # AI Setup
-genai.configure(api_key=GEMINI_API_KEY)
+genai.configure(api_key=AIzaSyAh9nSgM8AcXRkPpdpl_X1qQzxlpPCLnqc)
 gemini_model = genai.GenerativeModel("gemini-1.5-flash")
-groq_client = Groq(api_key=GROQ_API_KEY)
-mistral_client = Mistral(api_key=MISTRAL_API_KEY)
+groq_client = Groq(api_key=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)
+mistral_client = Mistral(api_key=mlcdtWBdftyjUKbTksmW8v3k5o1WGZO9)
 
 # Memory cache
 CLONES = {}
