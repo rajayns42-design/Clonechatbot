@@ -10,7 +10,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from modules.welcome import welcome_toggle, welcome_member 
 from modules.admin import ban_user, mute_user, promote_user
 from database import add_cloned_bot, remove_cloned_bot, chats_collection
-from config import (
+from smartchatbot.config import (
     API_ID, API_HASH, OWNER_ID, CLONE_LOGGER, 
     GEMINI_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY
 )
