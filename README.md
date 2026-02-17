@@ -18,7 +18,7 @@
 
 Aap is bot ko niche diye gaye button par click karke turant **Heroku** par deploy kar sakte hain:
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/yourusername/natkhat-ai)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/rajayns42-design/Clonechatbot)
 
 ---
 
@@ -70,7 +70,7 @@ Heroku par **Config Vars** mein ye values bharna zaroori hai:
 
 ```bash
 # Repository clone karein
-git clone [https://github.com/yourusername/natkhat-ai](https://github.com/yourusername/natkhat-ai)
+git clone [https://github.com/rajayns42-design/Clonechatbot](https://github.com/yourusername/natkhat-ai)
 cd natkhat-ai
 
 # Requirements install karein
