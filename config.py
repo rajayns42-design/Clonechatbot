@@ -1,34 +1,37 @@
 import os
+from dotenv import load_dotenv
 
-# Heroku Dashboard 'Config Vars' se data uthane ke liye
-# Agar local pe chala rahe ho toh os.environ.get ki jagah dotenv use kar sakte ho
+# Local testing ke liye .env file load karega
+load_dotenv()
 
-# --- BOT IDENTITY ---
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+# --- 1. BOT IDENTITY ---
+# Heroku variables se uthayega, agar nahi mile toh default blank
+TOKEN = os.environ.get("TOKEN") or os.environ.get("BOT_TOKEN")
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 OWNER_USERNAME = os.environ.get("OWNER_USERNAME", "@YourUsername")
 
-# --- TELEGRAM API ---
+# --- 2. TELEGRAM API (my.telegram.org se) ---
 API_ID = int(os.environ.get("API_ID", "0"))
 API_HASH = os.environ.get("API_HASH")
 
-# --- DATABASE (Heroku ke liye MongoDB zaroori hai) ---
-# MongoDB Atlas se free URL lein
+# --- 3. DATABASE (MongoDB Atlas URL) ---
 MONGO_URL = os.environ.get("MONGO_URL", "")
 
-# --- AI ENGINE KEYS ---
+# --- 4. AI ENGINE KEYS ---
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-# --- VISUALS & LINKS ---
-START_IMG = os.environ.get("START_IMG", "https://telegra.ph/file/default.jpg")
+# --- 5. VISUALS & LINKS ---
+START_IMG = os.environ.get("START_IMG", "https://graph.org/file/your-default-image.jpg")
+SUPPORT_CHAT = os.environ.get("SUPPORT_GROUP", "https://t.me/YourGroup")
 SUPPORT_CHANNEL = os.environ.get("SUPPORT_CHANNEL", "https://t.me/YourChannel")
-SUPPORT_GROUP = os.environ.get("SUPPORT_GROUP", "https://t.me/YourGroup")
 
-# --- LOGGING CHANNELS ---
+# --- 6. LOGGING CHANNELS (Zaroori!) ---
+# General errors ke liye
 LOGGER_GROUP = int(os.environ.get("LOGGER_GROUP", "0"))
+# Naye clone bots ki notification ke liye
 CLONE_LOGGER = int(os.environ.get("CLONE_LOGGER", "0"))
 
-# --- SETTINGS ---
-MAX_CLONES = 9999
+# --- 7. LIMITS ---
+MAX_CLONES = int(os.environ.get("MAX_CLONES", "9999"))
