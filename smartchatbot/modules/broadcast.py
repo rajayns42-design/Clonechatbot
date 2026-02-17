@@ -1,7 +1,7 @@
 import asyncio
 from telegram import Update
 from telegram.ext import ContextTypes
-from config import OWNER_ID  # Ye aapki (Main Owner) ID hai
+from smartchatbot.config import OWNER_ID  # Ye aapki (Main Owner) ID hai
 
 async def broadcast_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
