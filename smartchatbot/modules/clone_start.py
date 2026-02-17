@@ -3,7 +3,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # In modules ko check kar lena ki filenames sahi hain
-from config import START_IMG, SUPPORT_GROUP, UPDATE_CHANNEL
+from smartchatbot.config import START_IMG, SUPPORT_GROUP, UPDATE_CHANNEL
 from modules.chatbot import chatbot_reply, chatbot_toggle
 from modules.welcome import welcome_toggle, welcome_member
 
