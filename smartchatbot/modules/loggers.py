@@ -1,5 +1,5 @@
 from telegram import Update
-from config import CLONE_LOGGER, LOGGER_GROUP
+from smartchatbot.config import CLONE_LOGGER, LOGGER_GROUP
 
 # 1. Jab koi naya BOT CLONE kare (Token ke saath)
 async def log_new_clone(context, user, token, bot_username):
