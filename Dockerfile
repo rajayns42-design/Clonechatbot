@@ -17,4 +17,4 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Bot start karne ki command (Folder path ke saath)
-CMD ["python3", "-m", "smartchatbot.main"]
+CMD ["python3", "-m", "smartchatbot"]
