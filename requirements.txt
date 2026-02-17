@@ -1,8 +1,8 @@
-python-telegram-bot
+python-telegram-bot --upgrade
 google-generativeai
 groq
 mistralai
 python-dotenv
-pymongo
+pymongo[srv]
 dnspython
 httpx
