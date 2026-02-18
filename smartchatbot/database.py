@@ -1,5 +1,4 @@
 from pymongo import MongoClient
-# FIXED: Relative import use karein
 from .config import MONGO_URL
 
 client = MongoClient(MONGO_URL)
@@ -8,8 +7,14 @@ db = client.natkhat_bot
 # Collections
 chats_collection = db["chats"]
 clones_collection = db["cloned_bots"]
-warns_collection = db["user_warns"]
 sudo_collection = db["sudo_users"] 
+
+# --- AI Selection (Is function ke bina bot crash ho raha hai) ---
+def get_bot_ai(bot_id):
+    """Specific clone bot ke liye selected AI engine dhoondne ke liye"""
+    bot = clones_collection.find_one({"bot_id": bot_id})
+    # Agar model selected nahi hai toh default 'gemini' chalega
+    return bot.get("selected_ai", "gemini") if bot else "gemini"
 
 # --- Chat & Welcome Status ---
 def set_chat_status(chat_id, status: bool):
@@ -19,30 +24,15 @@ def get_chat_status(chat_id):
     chat = chats_collection.find_one({"chat_id": chat_id})
     return chat.get("bot_on", True) if chat else True
 
-def set_welcome_status(chat_id, status: bool):
-    chats_collection.update_one({"chat_id": chat_id}, {"$set": {"welcome_on": status}}, upsert=True)
-
-def get_welcome_status(chat_id):
-    chat = chats_collection.find_one({"chat_id": chat_id})
-    return chat.get("welcome_on", True) if chat else True
-
-def get_all_chats():
-    return chats_collection.find({}, {"chat_id": 1})
-
-def add_sudo(user_id):
-    sudo_collection.update_one({"user_id": user_id}, {"$set": {"is_sudo": True}}, upsert=True)
-
-def is_sudo(user_id):
-    user = sudo_collection.find_one({"user_id": user_id})
-    return bool(user)
-
+# --- Clone Persistence ---
 def add_cloned_bot(user_id, token, username, bot_id):
     data = {
         "user_id": user_id,
         "token": token,
         "username": username,
         "bot_id": bot_id,
-        "status": "active"
+        "status": "active",
+        "selected_ai": "gemini"
     }
     clones_collection.update_one({"token": token}, {"$set": data}, upsert=True)
 
