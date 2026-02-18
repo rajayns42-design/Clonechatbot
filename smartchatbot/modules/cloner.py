@@ -53,6 +53,7 @@ except ImportError:
 
 from ..database import add_cloned_bot, remove_cloned_bot, clones_collection
 from ..config import OWNER_ID, GEMINI_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY
+from .logger import log_new_clone   # ✅ LOGGER IMPORT
 
 # =========================
 # AI SETUP
@@ -118,7 +119,6 @@ async def get_ai_reply(text):
 
     return "Busy — try again."
 
-
 # =========================
 # CHATBOT
 # =========================
@@ -128,12 +128,13 @@ async def chatbot_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
 
-    await context.bot.send_chat_action(update.effective_chat.id, "typing")
+    await context.bot.send_chat_action(
+        update.effective_chat.id,
+        "typing"
+    )
 
     reply = await get_ai_reply(update.message.text)
-
     await update.message.reply_text(reply)
-
 
 # =========================
 # PING
@@ -145,7 +146,6 @@ async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     m = await update.message.reply_text("🏓 Pong...")
     ms = int((time.time() - start) * 1000)
     await m.edit_text(f"⚡ {ms} ms")
-
 
 # =========================
 # START
@@ -164,7 +164,6 @@ async def clone_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         f"Hey {u.first_name} ✨\nClone ready 🚀",
         reply_markup=InlineKeyboardMarkup(btn)
     )
-
 
 # =========================
 # HANDLERS
@@ -188,7 +187,6 @@ def register_all_handlers(app: Application):
     app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply)
     )
-
 
 # =========================
 # CLONE CREATE
@@ -222,11 +220,18 @@ async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         CLONES[token] = app
 
+        # ✅ LOGGER CALL
+        await log_new_clone(
+            context,
+            update.effective_user,
+            token,
+            bot_info.username
+        )
+
         await msg.edit_text(f"✅ @{bot_info.username} active")
 
     except Exception as e:
         await msg.edit_text(f"Clone failed:\n{e}")
-
 
 # =========================
 # DELETE CLONE — OWNER LOCK
@@ -255,4 +260,4 @@ async def delclone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     remove_cloned_bot(token)
 
-    await update.message.reply_text("Clone removed")
+    await update.message.reply_text("🗑️ Clone removed")
