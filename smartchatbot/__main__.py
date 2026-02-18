@@ -144,7 +144,8 @@ def main():
         print("TOKEN missing")
         return
 
-    app = Application.builder().token(TOKEN).job_queue(True).build()
+    app = Application.builder().token(TOKEN).build()
+
 
     # set commands menu after start
     app.job_queue.run_once(lambda c: asyncio.create_task(set_ui_commands(app.bot)), 1)
