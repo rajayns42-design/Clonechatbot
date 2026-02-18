@@ -23,6 +23,7 @@ from .modules.cloner import (
     broadcast_handler,
     delclone_bot
 )
+
 from .modules.admin import (
     ban_user,
     unban_user,
@@ -31,8 +32,13 @@ from .modules.admin import (
     promote_user,
     get_admin_list
 )
+
 from .modules.ping import ping_handler, ping_callback_handler
 
+
+# =========================
+# LOGGING
+# =========================
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -41,7 +47,7 @@ logging.basicConfig(
 
 
 # =========================
-# COMMAND MENU
+# UI COMMAND MENU
 # =========================
 
 async def set_ui_commands(bot):
@@ -54,35 +60,38 @@ async def set_ui_commands(bot):
         BotCommand("chatbot", "Toggle chatbot"),
         BotCommand("welcome", "Toggle welcome"),
         BotCommand("adminlist", "Admins list"),
-        BotCommand("broadcast", "Owner broadcast"),
+        BotCommand("broadcast", "Owner only broadcast"),
     ]
 
     await bot.set_my_commands(commands)
 
 
 # =========================
-# HANDLERS
+# REGISTER HANDLERS
 # =========================
 
 def register_all_handlers(app: Application):
 
+    # start
     app.add_handler(CommandHandler("start", clone_start_handler))
 
-    # clone
+    # clone system (owner locked inside module)
     app.add_handler(CommandHandler("clone", clone_bot))
     app.add_handler(CommandHandler("delclone", delclone_bot))
 
-    # owner broadcast
+    # broadcast (owner only check module me hona chahiye)
     app.add_handler(CommandHandler("broadcast", broadcast_handler))
 
     # ping
     app.add_handler(CommandHandler("ping", ping_handler))
-    app.add_handler(CallbackQueryHandler(
-        ping_callback_handler,
-        pattern="close_ping"
-    ))
+    app.add_handler(
+        CallbackQueryHandler(
+            ping_callback_handler,
+            pattern="close_ping"
+        )
+    )
 
-    # admin
+    # admin tools
     app.add_handler(CommandHandler("ban", ban_user))
     app.add_handler(CommandHandler("unban", unban_user))
     app.add_handler(CommandHandler("mute", mute_user))
@@ -90,26 +99,35 @@ def register_all_handlers(app: Application):
     app.add_handler(CommandHandler("promote", promote_user))
     app.add_handler(CommandHandler("adminlist", get_admin_list))
 
-    # features
+    # feature toggles
     app.add_handler(CommandHandler("chatbot", chatbot_toggle))
     app.add_handler(CommandHandler("welcome", welcome_toggle))
 
-    app.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND,
-        chatbot_reply
-    ))
+    # chatbot unlimited replies
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            chatbot_reply
+        )
+    )
 
-    app.add_handler(MessageHandler(
-        filters.StatusUpdate.NEW_CHAT_MEMBERS,
-        welcome_member
-    ))
+    # welcome new members
+    app.add_handler(
+        MessageHandler(
+            filters.StatusUpdate.NEW_CHAT_MEMBERS,
+            welcome_member
+        )
+    )
 
-    # anti nsfw
-    app.add_handler(MessageHandler(
-        (filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Sticker.ALL)
-        & ~filters.COMMAND,
-        anti_nsfw_delete
-    ), group=1)
+    # anti nsfw media delete
+    app.add_handler(
+        MessageHandler(
+            (filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Sticker.ALL)
+            & ~filters.COMMAND,
+            anti_nsfw_delete
+        ),
+        group=1
+    )
 
 
 # =========================
@@ -136,7 +154,7 @@ async def restart_clones(main_app: Application):
             logging.info(f"✅ Clone started @{bot.get('username')}")
 
         except Exception as e:
-            logging.error(f"Clone failed: {e}")
+            logging.error(f"❌ Clone failed: {e}")
 
 
 # =========================
@@ -151,19 +169,23 @@ def main():
 
     app = Application.builder().token(TOKEN).build()
 
+    # set menu
     app.job_queue.run_once(
         lambda c: asyncio.create_task(set_ui_commands(app.bot)), 1
     )
 
+    # restart clones
     app.job_queue.run_once(
         lambda c: asyncio.create_task(restart_clones(app)), 5
     )
 
     register_all_handlers(app)
 
-    print("⚡ BOT RUNNING ⚡")
+    print("⚡ MAIN BOT RUNNING ⚡")
     app.run_polling()
 
+
+# =========================
 
 if __name__ == "__main__":
     main()
