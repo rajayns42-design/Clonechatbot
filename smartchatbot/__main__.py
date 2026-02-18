@@ -13,8 +13,11 @@ from telegram.ext import (
 from .config import TOKEN
 from .database import get_all_bots
 
+# ========= MODULES =========
+
 from .modules.chatbot import chatbot_reply, chatbot_toggle
 from .modules.welcome import welcome_toggle, welcome_member
+
 from .modules.cloner import (
     clone_bot,
     clone_start_handler,
@@ -71,17 +74,18 @@ async def set_ui_commands(bot):
 
 def register_all_handlers(app: Application):
 
-    # start
+    # ----- START -----
     app.add_handler(CommandHandler("start", clone_start_handler))
 
-    # clone system
+    # ----- CLONE SYSTEM -----
     app.add_handler(CommandHandler("clone", clone_bot))
     app.add_handler(CommandHandler("delclone", delclone_bot))
 
-    # broadcast (owner check inside module)
+    # ----- OWNER BROADCAST -----
+    # owner check inside broadcast_handler
     app.add_handler(CommandHandler("broadcast", broadcast_handler))
 
-    # ping
+    # ----- PING -----
     app.add_handler(CommandHandler("ping", ping_handler))
     app.add_handler(
         CallbackQueryHandler(
@@ -90,7 +94,7 @@ def register_all_handlers(app: Application):
         )
     )
 
-    # admin tools
+    # ----- ADMIN -----
     app.add_handler(CommandHandler("ban", ban_user))
     app.add_handler(CommandHandler("unban", unban_user))
     app.add_handler(CommandHandler("mute", mute_user))
@@ -98,11 +102,11 @@ def register_all_handlers(app: Application):
     app.add_handler(CommandHandler("promote", promote_user))
     app.add_handler(CommandHandler("adminlist", get_admin_list))
 
-    # feature toggles
+    # ----- FEATURE TOGGLES -----
     app.add_handler(CommandHandler("chatbot", chatbot_toggle))
     app.add_handler(CommandHandler("welcome", welcome_toggle))
 
-    # chatbot replies (unlimited lifetime)
+    # ----- CHATBOT (UNLIMITED REPLIES) -----
     app.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
@@ -110,7 +114,7 @@ def register_all_handlers(app: Application):
         )
     )
 
-    # welcome new members
+    # ----- WELCOME -----
     app.add_handler(
         MessageHandler(
             filters.StatusUpdate.NEW_CHAT_MEMBERS,
@@ -118,10 +122,11 @@ def register_all_handlers(app: Application):
         )
     )
 
-    # anti media delete
+    # ----- ANTI MEDIA FILTER -----
     app.add_handler(
         MessageHandler(
-            (filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Sticker.ALL)
+            (filters.PHOTO | filters.VIDEO |
+             filters.ANIMATION | filters.Sticker.ALL)
             & ~filters.COMMAND,
             anti_nsfw_delete
         ),
@@ -179,13 +184,13 @@ def main():
         .build()
     )
 
-    # set command menu after boot
+    # set commands menu after start
     app.job_queue.run_once(
         lambda c: asyncio.create_task(set_ui_commands(app.bot)),
         1
     )
 
-    # restart clones after boot
+    # restart clone bots after boot
     app.job_queue.run_once(
         lambda c: asyncio.create_task(restart_clones(app)),
         5
