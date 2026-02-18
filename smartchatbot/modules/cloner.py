@@ -20,7 +20,7 @@ from telegram.ext import (
 )
 
 # =========================
-# COMMANDS (NO BROADCAST)
+# COMMAND MENU
 # =========================
 
 CLONE_COMMANDS = [
@@ -30,28 +30,28 @@ CLONE_COMMANDS = [
     BotCommand("ban", "Ban user"),
     BotCommand("mute", "Mute user"),
     BotCommand("promote", "Promote user"),
-    BotCommand("ping", "Check bot speed"),
+    BotCommand("ping", "Check speed"),
 ]
 
 # =========================
 # IMPORTS
 # =========================
 
-from .welcome import welcome_toggle, welcome_member
+from .welcome import welcome_member
 
 try:
     from .admin import ban_user, mute_user, promote_user
 except ImportError:
     async def ban_user(update, context):
-        await update.message.reply_text("⚠️ admin module missing")
+        await update.message.reply_text("admin module missing")
 
     async def mute_user(update, context):
-        await update.message.reply_text("⚠️ admin module missing")
+        await update.message.reply_text("admin module missing")
 
     async def promote_user(update, context):
-        await update.message.reply_text("⚠️ admin module missing")
+        await update.message.reply_text("admin module missing")
 
-from ..database import add_cloned_bot, remove_cloned_bot, chats_collection
+from ..database import add_cloned_bot, remove_cloned_bot, clones_collection
 from ..config import OWNER_ID, GEMINI_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY
 
 # =========================
@@ -67,26 +67,38 @@ mistral_client = Mistral(api_key=MISTRAL_API_KEY) if MISTRAL_API_KEY else None
 CLONES = {}
 
 # =========================
-# AI REPLY
+# SHORT AI REPLY
 # =========================
 
 async def get_ai_reply(text):
 
+    prompt = f"Reply in very short chat style (max 2 lines). User: {text}"
+
     if GEMINI_API_KEY:
         try:
-            r = gemini_model.generate_content(text)
+            r = gemini_model.generate_content(
+                prompt,
+                generation_config={
+                    "max_output_tokens": 120,
+                    "temperature": 0.7
+                }
+            )
             if r and r.text:
-                return r.text
+                return r.text[:300]
         except:
             pass
 
     if groq_client:
         try:
             c = groq_client.chat.completions.create(
-                messages=[{"role": "user", "content": text}],
+                messages=[
+                    {"role": "system", "content": "Reply in very short 1-2 lines"},
+                    {"role": "user", "content": text}
+                ],
                 model="llama3-8b-8192",
+                max_tokens=120
             )
-            return c.choices[0].message.content
+            return c.choices[0].message.content[:300]
         except:
             pass
 
@@ -94,17 +106,21 @@ async def get_ai_reply(text):
         try:
             c = mistral_client.chat.complete(
                 model="mistral-tiny",
-                messages=[{"role": "user", "content": text}],
+                messages=[
+                    {"role": "system", "content": "Very short reply"},
+                    {"role": "user", "content": text},
+                ],
+                max_tokens=120
             )
-            return c.choices[0].message.content
+            return c.choices[0].message.content[:300]
         except:
             pass
 
-    return "❌ AI busy — try again later."
+    return "Busy — try again."
 
 
 # =========================
-# CHATBOT REPLY
+# CHATBOT
 # =========================
 
 async def chatbot_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -112,24 +128,23 @@ async def chatbot_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
 
-    await context.bot.send_chat_action(
-        update.effective_chat.id,
-        "typing"
-    )
+    await context.bot.send_chat_action(update.effective_chat.id, "typing")
 
     reply = await get_ai_reply(update.message.text)
+
     await update.message.reply_text(reply)
 
 
 # =========================
-# PING COMMAND
+# PING
 # =========================
 
 async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     start = time.time()
     m = await update.message.reply_text("🏓 Pong...")
     ms = int((time.time() - start) * 1000)
-    await m.edit_text(f"🏓 Pong ⚡ {ms} ms")
+    await m.edit_text(f"⚡ {ms} ms")
 
 
 # =========================
@@ -140,24 +155,19 @@ async def clone_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     u = update.effective_user
 
-    text = (
-        f"Hey {u.first_name} ✨\n\n"
-        "Clone bot ready 🚀"
-    )
-
     btn = [[InlineKeyboardButton(
         "➕ Add To Group",
         url=f"https://t.me/{context.bot.username}?startgroup=true"
     )]]
 
     await update.message.reply_text(
-        text,
+        f"Hey {u.first_name} ✨\nClone ready 🚀",
         reply_markup=InlineKeyboardMarkup(btn)
     )
 
 
 # =========================
-# HANDLERS REGISTER
+# HANDLERS
 # =========================
 
 def register_all_handlers(app: Application):
@@ -190,7 +200,7 @@ async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await update.message.reply_text("Use: /clone <bot_token>")
 
     token = context.args[0]
-    msg = await update.message.reply_text("🚀 Clone starting...")
+    msg = await update.message.reply_text("Starting clone...")
 
     try:
         app = Application.builder().token(token).build()
@@ -199,7 +209,6 @@ async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await app.initialize()
         await app.start()
 
-        # set commands
         await app.bot.set_my_commands(CLONE_COMMANDS)
 
         bot_info = await app.bot.get_me()
@@ -213,22 +222,32 @@ async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         CLONES[token] = app
 
-        await msg.edit_text(f"✅ Clone Active: @{bot_info.username}")
+        await msg.edit_text(f"✅ @{bot_info.username} active")
 
     except Exception as e:
-        await msg.edit_text(f"❌ Clone failed:\n{e}")
+        await msg.edit_text(f"Clone failed:\n{e}")
 
 
 # =========================
-# DELETE CLONE
+# DELETE CLONE — OWNER LOCK
 # =========================
 
 async def delclone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.args:
-        return
+        return await update.message.reply_text("Use: /delclone <token>")
 
     token = context.args[0]
+    data = clones_collection.find_one({"token": token})
+
+    if not data:
+        return await update.message.reply_text("Clone not found")
+
+    if (
+        update.effective_user.id != data["user_id"]
+        and update.effective_user.id != OWNER_ID
+    ):
+        return await update.message.reply_text("Only clone owner can delete")
 
     if token in CLONES:
         await CLONES[token].stop()
@@ -236,4 +255,4 @@ async def delclone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     remove_cloned_bot(token)
 
-    await update.message.reply_text("🗑️ Clone removed")
+    await update.message.reply_text("Clone removed")
