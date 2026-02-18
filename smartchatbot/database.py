@@ -48,21 +48,20 @@ def remove_user(user_id: int):
 
 
 # =========================
-# CHATBOT STATUS (ON/OFF FIX)
+# CHATBOT STATUS (ON/OFF)
 # =========================
 
-# Ye function chatbot_toggle command ke liye hai
 def set_chat_status(chat_id, status: bool):
+    """Chatbot ko enable ya disable karne ke liye status set karta hai"""
     chats_collection.update_one(
         {"chat_id": int(chat_id)},
         {"$set": {"bot_on": bool(status)}},
         upsert=True
     )
 
-# Ye function chatbot_reply ke liye check karta hai
 def get_chat_status(chat_id):
+    """Check karta hai ki chatbot ON hai ya nahi. Default: True (ON)"""
     chat = chats_collection.find_one({"chat_id": int(chat_id)})
-    # Default hum True (ON) rakh rahe hain
     if not chat:
         return True
     return chat.get("bot_on", True)
@@ -128,22 +127,43 @@ def remove_cloned_bot(token):
     )
 
 def get_all_bots():
+    """Sirf active clones ko wapas lata hai"""
     return list(clones_collection.find({"status": "active"}))
+
+def is_clone_active(token):
+    return clones_collection.find_one({
+        "token": token,
+        "status": "active"
+    }) is not None
 
 
 # =========================
 # SUDO & OWNER LOOKUPS
 # =========================
 
-def is_sudo(user_id):
-    return sudo_collection.find_one({"user_id": int(user_id)}) is not None
-
 def add_sudo(user_id):
-    sudo_collection.update_one({"user_id": int(user_id)}, {"$set": {"user_id": int(user_id)}}, upsert=True)
+    sudo_collection.update_one(
+        {"user_id": int(user_id)},
+        {"$set": {"user_id": int(user_id)}},
+        upsert=True
+    )
 
 def remove_sudo(user_id):
     sudo_collection.delete_one({"user_id": int(user_id)})
 
+def is_sudo(user_id):
+    return sudo_collection.find_one({"user_id": int(user_id)}) is not None
+
 def get_clone_owner_by_token(token):
     bot = clones_collection.find_one({"token": token})
     return int(bot["user_id"]) if bot else None
+
+def get_clone_owner_by_botid(bot_id):
+    bot = clones_collection.find_one({"bot_id": int(bot_id)})
+    return int(bot["user_id"]) if bot else None
+
+def get_user_clones(user_id):
+    return list(clones_collection.find({
+        "user_id": int(user_id),
+        "status": "active"
+    }))
