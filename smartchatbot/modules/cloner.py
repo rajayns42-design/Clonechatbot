@@ -8,7 +8,8 @@ from telegram import (
     Update,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    BotCommand
+    BotCommand,
+    ChatPermissions
 )
 
 from telegram.ext import (
@@ -18,20 +19,6 @@ from telegram.ext import (
     filters,
     ContextTypes
 )
-
-# =========================
-# COMMAND MENU
-# =========================
-
-CLONE_COMMANDS = [
-    BotCommand("start", "Start bot"),
-    BotCommand("clone", "Create clone"),
-    BotCommand("delclone", "Delete clone"),
-    BotCommand("ban", "Ban user"),
-    BotCommand("mute", "Mute user"),
-    BotCommand("promote", "Promote user"),
-    BotCommand("ping", "Check speed"),
-]
 
 # =========================
 # IMPORTS
@@ -53,7 +40,29 @@ except ImportError:
 
 from ..database import add_cloned_bot, remove_cloned_bot, clones_collection
 from ..config import OWNER_ID, GEMINI_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY
-from .logger import log_new_clone   # ✅ LOGGER IMPORT
+
+# LOGGER SAFE IMPORT
+try:
+    from .logger import log_new_clone
+except:
+    async def log_new_clone(*args, **kwargs):
+        pass
+
+
+# =========================
+# COMMAND MENU
+# =========================
+
+CLONE_COMMANDS = [
+    BotCommand("start", "Start bot"),
+    BotCommand("clone", "Create clone"),
+    BotCommand("delclone", "Delete clone"),
+    BotCommand("ban", "Ban user"),
+    BotCommand("mute", "Mute user"),
+    BotCommand("promote", "Promote user"),
+    BotCommand("ping", "Check speed"),
+]
+
 
 # =========================
 # AI SETUP
@@ -73,54 +82,43 @@ CLONES = {}
 
 async def get_ai_reply(text):
 
-    prompt = f"Reply in very short chat style (max 2 lines). User: {text}"
+    prompt = f"Reply very short (1–2 lines). User: {text}"
 
-    if GEMINI_API_KEY:
-        try:
-            r = gemini_model.generate_content(
-                prompt,
-                generation_config={
-                    "max_output_tokens": 120,
-                    "temperature": 0.7
-                }
-            )
+    try:
+        if GEMINI_API_KEY:
+            r = gemini_model.generate_content(prompt)
             if r and r.text:
-                return r.text[:300]
-        except:
-            pass
+                return r.text[:200]
+    except:
+        pass
 
-    if groq_client:
-        try:
+    try:
+        if groq_client:
             c = groq_client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": "Reply in very short 1-2 lines"},
-                    {"role": "user", "content": text}
-                ],
+                messages=[{"role": "user", "content": text}],
                 model="llama3-8b-8192",
-                max_tokens=120
+                max_tokens=80
             )
-            return c.choices[0].message.content[:300]
-        except:
-            pass
+            return c.choices[0].message.content[:200]
+    except:
+        pass
 
-    if mistral_client:
-        try:
+    try:
+        if mistral_client:
             c = mistral_client.chat.complete(
                 model="mistral-tiny",
-                messages=[
-                    {"role": "system", "content": "Very short reply"},
-                    {"role": "user", "content": text},
-                ],
-                max_tokens=120
+                messages=[{"role": "user", "content": text}],
+                max_tokens=80
             )
-            return c.choices[0].message.content[:300]
-        except:
-            pass
+            return c.choices[0].message.content[:200]
+    except:
+        pass
 
-    return "Busy — try again."
+    return "Hmm 🙂"
+
 
 # =========================
-# CHATBOT
+# CHATBOT — UNLIMITED
 # =========================
 
 async def chatbot_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -128,13 +126,10 @@ async def chatbot_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
 
-    await context.bot.send_chat_action(
-        update.effective_chat.id,
-        "typing"
-    )
-
+    await context.bot.send_chat_action(update.effective_chat.id, "typing")
     reply = await get_ai_reply(update.message.text)
     await update.message.reply_text(reply)
+
 
 # =========================
 # PING
@@ -146,6 +141,7 @@ async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     m = await update.message.reply_text("🏓 Pong...")
     ms = int((time.time() - start) * 1000)
     await m.edit_text(f"⚡ {ms} ms")
+
 
 # =========================
 # START
@@ -165,8 +161,37 @@ async def clone_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         reply_markup=InlineKeyboardMarkup(btn)
     )
 
+
 # =========================
-# HANDLERS
+# ANTI MEDIA DELETE
+# =========================
+
+async def anti_nsfw_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not update.message:
+        return
+
+    if update.effective_chat.type == "private":
+        return
+
+    media = (
+        update.message.photo or
+        update.message.video or
+        update.message.animation or
+        update.message.sticker
+    )
+
+    if not media:
+        return
+
+    try:
+        await update.message.delete()
+    except:
+        pass
+
+
+# =========================
+# HANDLERS REGISTER
 # =========================
 
 def register_all_handlers(app: Application):
@@ -180,13 +205,21 @@ def register_all_handlers(app: Application):
     app.add_handler(CommandHandler("promote", promote_user))
     app.add_handler(CommandHandler("ping", ping_cmd))
 
-    app.add_handler(
-        MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member)
-    )
+    app.add_handler(MessageHandler(
+        filters.StatusUpdate.NEW_CHAT_MEMBERS,
+        welcome_member
+    ))
 
-    app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply)
-    )
+    app.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND,
+        chatbot_reply
+    ))
+
+    app.add_handler(MessageHandler(
+        (filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Sticker.ALL),
+        anti_nsfw_delete
+    ), group=1)
+
 
 # =========================
 # CLONE CREATE
@@ -220,7 +253,6 @@ async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         CLONES[token] = app
 
-        # ✅ LOGGER CALL
         await log_new_clone(
             context,
             update.effective_user,
@@ -233,8 +265,9 @@ async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await msg.edit_text(f"Clone failed:\n{e}")
 
+
 # =========================
-# DELETE CLONE — OWNER LOCK
+# DELETE CLONE — OWNER ONLY
 # =========================
 
 async def delclone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
