@@ -9,11 +9,11 @@ chats_collection = db["chats"]
 clones_collection = db["cloned_bots"]
 sudo_collection = db["sudo_users"] 
 
-# --- AI Selection (Is function ke bina bot crash ho raha hai) ---
+# --- AI Selection Function (Iske bina bot crash ho raha tha) ---
 def get_bot_ai(bot_id):
     """Specific clone bot ke liye selected AI engine dhoondne ke liye"""
     bot = clones_collection.find_one({"bot_id": bot_id})
-    # Agar model selected nahi hai toh default 'gemini' chalega
+    # Default model 'gemini' rakha gaya hai
     return bot.get("selected_ai", "gemini") if bot else "gemini"
 
 # --- Chat & Welcome Status ---
@@ -24,7 +24,7 @@ def get_chat_status(chat_id):
     chat = chats_collection.find_one({"chat_id": chat_id})
     return chat.get("bot_on", True) if chat else True
 
-# --- Clone Persistence ---
+# --- Clone Management ---
 def add_cloned_bot(user_id, token, username, bot_id):
     data = {
         "user_id": user_id,
