@@ -15,15 +15,23 @@ welcome_collection = db["welcome_settings"]
 # =========================
 # AI SELECTION
 # =========================
+
 def get_bot_ai(bot_id):
-    """Specific clone bot ke liye selected AI engine"""
     bot = clones_collection.find_one({"bot_id": bot_id})
     return bot.get("selected_ai", "gemini") if bot else "gemini"
 
 
+def set_bot_ai(bot_id, model_name: str):
+    clones_collection.update_one(
+        {"bot_id": bot_id},
+        {"$set": {"selected_ai": model_name}},
+        upsert=True
+    )
+
 # =========================
 # CHAT STATUS
 # =========================
+
 def set_chat_status(chat_id, status: bool):
     chats_collection.update_one(
         {"chat_id": chat_id},
@@ -37,8 +45,9 @@ def get_chat_status(chat_id):
 
 
 # =========================
-# WELCOME STATUS  ✅ FIX
+# WELCOME STATUS
 # =========================
+
 def set_welcome_status(chat_id, status: bool):
     welcome_collection.update_one(
         {"chat_id": chat_id},
@@ -54,9 +63,10 @@ def get_welcome_status(chat_id):
 # =========================
 # CLONE MANAGEMENT
 # =========================
+
 def add_cloned_bot(user_id, token, username, bot_id):
     data = {
-        "user_id": user_id,
+        "user_id": user_id,     # ✅ clone owner
         "token": token,
         "username": username,
         "bot_id": bot_id,
@@ -71,10 +81,6 @@ def add_cloned_bot(user_id, token, username, bot_id):
     )
 
 
-def get_all_bots():
-    return list(clones_collection.find({"status": "active"}))
-
-
 def remove_cloned_bot(token):
     clones_collection.update_one(
         {"token": token},
@@ -82,15 +88,56 @@ def remove_cloned_bot(token):
     )
 
 
+def get_all_bots():
+    """All active clones — restart restore ke kaam aayega"""
+    return list(clones_collection.find({"status": "active"}))
+
+
 # =========================
-# SUDO USERS (optional but safe)
+# ✅ NEW — OWNER LOOKUPS
 # =========================
+
+def get_clone_owner_by_token(token):
+    bot = clones_collection.find_one({"token": token})
+    return bot.get("user_id") if bot else None
+
+
+def get_clone_owner_by_botid(bot_id):
+    bot = clones_collection.find_one({"bot_id": bot_id})
+    return bot.get("user_id") if bot else None
+
+
+def is_clone_active(token):
+    return clones_collection.find_one({
+        "token": token,
+        "status": "active"
+    }) is not None
+
+
+# =========================
+# ✅ NEW — USER CLONE LIST
+# =========================
+
+def get_user_clones(user_id):
+    return list(clones_collection.find({
+        "user_id": user_id,
+        "status": "active"
+    }))
+
+
+# =========================
+# SUDO USERS
+# =========================
+
 def add_sudo(user_id):
     sudo_collection.update_one(
         {"user_id": user_id},
         {"$set": {"user_id": user_id}},
         upsert=True
     )
+
+def remove_sudo(user_id):
+    sudo_collection.delete_one({"user_id": user_id})
 
 def is_sudo(user_id):
     return sudo_collection.find_one({"user_id": user_id}) is not None
