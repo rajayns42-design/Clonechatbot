@@ -1,6 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from smartchatbot.config import START_IMG, OWNER_USERNAME, SUPPORT_GROUP, UPDATE_CHANNEL
+from .config import START_IMG, OWNER_USERNAME, SUPPORT_GROUP, UPDATE_CHANNEL
 
 # --- Start Handler ---
 async def master_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
