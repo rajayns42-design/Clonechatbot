@@ -1,4 +1,3 @@
-import os
 import logging
 import asyncio
 
@@ -75,11 +74,11 @@ def register_all_handlers(app: Application):
     # start
     app.add_handler(CommandHandler("start", clone_start_handler))
 
-    # clone system (owner locked inside module)
+    # clone system
     app.add_handler(CommandHandler("clone", clone_bot))
     app.add_handler(CommandHandler("delclone", delclone_bot))
 
-    # broadcast (owner only check module me hona chahiye)
+    # broadcast (owner check inside module)
     app.add_handler(CommandHandler("broadcast", broadcast_handler))
 
     # ping
@@ -103,7 +102,7 @@ def register_all_handlers(app: Application):
     app.add_handler(CommandHandler("chatbot", chatbot_toggle))
     app.add_handler(CommandHandler("welcome", welcome_toggle))
 
-    # chatbot unlimited replies
+    # chatbot replies (unlimited lifetime)
     app.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
@@ -119,7 +118,7 @@ def register_all_handlers(app: Application):
         )
     )
 
-    # anti nsfw media delete
+    # anti media delete
     app.add_handler(
         MessageHandler(
             (filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Sticker.ALL)
@@ -131,25 +130,31 @@ def register_all_handlers(app: Application):
 
 
 # =========================
-# RESTART CLONES
+# RESTART CLONES FROM DB
 # =========================
 
 async def restart_clones(main_app: Application):
 
     bots = get_all_bots()
 
+    if not bots:
+        logging.info("No clones to restart")
+        return
+
     for bot in bots:
         try:
-            clone_app = Application.builder().token(
-                bot["token"]
-            ).build()
+            clone_app = (
+                Application.builder()
+                .token(bot["token"])
+                .job_queue(True)
+                .build()
+            )
 
             await set_ui_commands(clone_app.bot)
             register_all_handlers(clone_app)
 
             await clone_app.initialize()
             await clone_app.start()
-            await clone_app.updater.start_polling()
 
             logging.info(f"✅ Clone started @{bot.get('username')}")
 
@@ -167,16 +172,23 @@ def main():
         print("TOKEN missing")
         return
 
-    app = Application.builder().token(TOKEN).build()
-
-    # set menu
-    app.job_queue.run_once(
-        lambda c: asyncio.create_task(set_ui_commands(app.bot)), 1
+    app = (
+        Application.builder()
+        .token(TOKEN)
+        .job_queue(True)
+        .build()
     )
 
-    # restart clones
+    # set command menu after boot
     app.job_queue.run_once(
-        lambda c: asyncio.create_task(restart_clones(app)), 5
+        lambda c: asyncio.create_task(set_ui_commands(app.bot)),
+        1
+    )
+
+    # restart clones after boot
+    app.job_queue.run_once(
+        lambda c: asyncio.create_task(restart_clones(app)),
+        5
     )
 
     register_all_handlers(app)
