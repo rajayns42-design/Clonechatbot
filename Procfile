@@ -1,1 +1,1 @@
-worker: python3 smartchatbot
+worker: python3 -m smartchatbot
