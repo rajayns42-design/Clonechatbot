@@ -4,7 +4,7 @@ import asyncio
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Modules Import
-from config import TOKEN
+from smartchatbot.config import TOKEN
 from database import get_all_bots
 from modules.chatbot import chatbot_reply, chatbot_toggle
 from modules.welcome import welcome_toggle, welcome_member
