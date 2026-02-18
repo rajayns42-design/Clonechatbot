@@ -1,8 +1,9 @@
 setup:
   addons:
-    - plan: heroku-postgresql
+    - plan: heroku-postgresql:essential-0 # Plan name updated to free/cheap tier
 build:
   docker:
     worker: Dockerfile
 run:
-  worker: python3 main.py
+  worker: python3 -m smartchatbot
+
