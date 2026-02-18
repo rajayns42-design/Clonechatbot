@@ -1,7 +1,7 @@
 python-telegram-bot
 google-generativeai
 groq
-mistralai
+mistralai>=1.0.0
 python-dotenv
 pymongo[srv]
 dnspython
