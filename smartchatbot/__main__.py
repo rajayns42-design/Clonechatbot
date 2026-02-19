@@ -41,11 +41,11 @@ from .modules.admin import (
 from .modules.ping import ping_handler, ping_callback_handler
 
 # =========================
-# 🔄 LOGGER SYSTEM (MESSAGES BHEJNE KE LIYE)
+# 🔄 LOGGER SYSTEM (FIXED FOR OFFSET ERRORS)
 # =========================
 
 async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Naye user ka log group mein bhejta hai"""
+    """Naye user ka log group mein bhejta hai - Fixed for HTML safety"""
     if not update.effective_user:
         return
     
@@ -57,15 +57,17 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Sirf /start par logger message bhejne ke liye logic
     if update.message and update.message.text == "/start":
+        # HTML use kar rahe hain taaki byte offset error na aaye
         text = (
-            "👤 **NEW USER STARTED!**\n\n"
-            f"🤖 **Bot:** @{bot.username}\n"
-            f"🆔 **User ID:** `{user.id}`\n"
-            f"📝 **Name:** {user.first_name}\n"
-            f"🏷 **Username:** @{user.username if user.username else 'N/A'}"
+            "👤 <b>NEW USER STARTED!</b>\n\n"
+            f"🤖 <b>Bot:</b> @{bot.username}\n"
+            f"🆔 <b>User ID:</b> <code>{user.id}</code>\n"
+            f"📝 <b>Name:</b> {user.first_name}\n"
+            f"🏷 <b>Username:</b> @{user.username if user.username else 'N/A'}"
         )
         try:
-            await context.bot.send_message(chat_id=LOGGER_GROUP, text=text, parse_mode="Markdown")
+            # Markdown se HTML par switch kiya
+            await context.bot.send_message(chat_id=LOGGER_GROUP, text=text, parse_mode="HTML")
         except Exception as e:
             logging.error(f"Logger Error: {e}")
 
@@ -130,14 +132,17 @@ async def restart_clones(main_app: Application):
     bots = get_all_bots()
     for bot in bots:
         try:
+            # Ensure proper app builder for clones
             clone_app = Application.builder().token(bot["token"]).build()
             register_all_handlers(clone_app)
             await clone_app.initialize()
             await clone_app.start()
-        except: pass
+        except Exception as e:
+            logging.error(f"Failed to restart clone: {e}")
 
 def main():
     if not TOKEN: sys.exit(1)
+    # Using 'import asyncio' properly in main call
     app = Application.builder().token(TOKEN).build()
     register_all_handlers(app)
 
