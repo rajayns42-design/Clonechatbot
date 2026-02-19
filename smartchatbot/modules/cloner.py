@@ -24,7 +24,6 @@ from telegram.ext import (
 # =========================
 # CONFIG & DATABASE IMPORTS
 # =========================
-# Yahan variables ke naam config.py ke hisaab se fix kar diye hain
 from ..config import (
     OWNER_ID, GEMINI_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY, 
     LOGGER_GROUP, CLONE_LOGGER, START_IMG, SUPPORT_GROUP, UPDATE_CHANNEL
@@ -38,7 +37,37 @@ from .welcome import master_start, help_callback
 from .admin import ban_user, unban_user, mute_user, unmute_user, promote_user
 
 # =========================
-# 🔄 LOGGER SYSTEM (FIXED)
+# 🛡️ ANTI-NSFW SYSTEM (ADDED)
+# =========================
+
+BAD_WORDS = ["nude", "porn", "sex", "xxx", "pussy", "dick", "mms", "sexy"]
+
+async def anti_nsfw_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Checks for NSFW keywords in text and captions"""
+    if not update.message:
+        return
+
+    text = ""
+    if update.message.text:
+        text = update.message.text.lower()
+    elif update.message.caption:
+        text = update.message.caption.lower()
+
+    # Keyword scanning
+    if any(word in text for word in BAD_WORDS):
+        try:
+            await update.message.delete()
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"🚫 @{update.effective_user.username}, Ganda content yahan allow nahi hai!"
+            )
+            return True # Content deleted
+        except Exception:
+            pass
+    return False
+
+# =========================
+# 🔄 LOGGER SYSTEM
 # =========================
 
 async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -78,19 +107,15 @@ async def log_new_clone(context: ContextTypes.DEFAULT_TYPE, user, token, bot_use
 # =========================
 # 🔄 UNLIMITED AI ENGINE
 # =========================
+
 async def get_unlimited_ai_reply(text):
     prompt = f"Reply in Hinglish (natkhat flirty style, 1 line): {text}"
     try:
         if GEMINI_API_KEY:
             genai.configure(api_key=GEMINI_API_KEY)
             model = genai.GenerativeModel("gemini-1.5-flash")
-            return model.generate_content(prompt).text
-    except: pass
-    try:
-        if GROQ_API_KEY:
-            client = Groq(api_key=GROQ_API_KEY)
-            res = client.chat.completions.create(messages=[{"role":"user","content":prompt}], model="llama3-8b-8192")
-            return res.choices[0].message.content
+            res = model.generate_content(prompt)
+            return res.text
     except: pass
     return random.choice(["Ofo! Network nakhre kar raha hai! ✨", "Suno na baby, ruko thoda! 😉"])
 
@@ -108,7 +133,8 @@ async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         app = Application.builder().token(token).build()
         register_all_handlers(app) 
-        await app.initialize(); await app.start()
+        await app.initialize()
+        await app.start()
         
         me = await app.bot.get_me()
         add_cloned_bot(user.id, token, me.username, me.id)
@@ -139,10 +165,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(text, parse_mode="Markdown")
 
-# =========================
-# ⚙️ REGISTRATION & UTILS
-# =========================
-
 async def chatbot_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args: return await update.message.reply_text("➜ `/chatbot on/off`?")
     set_chat_status(update.effective_chat.id, context.args[0].lower() == "on")
@@ -152,19 +174,6 @@ async def welcome_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args: return await update.message.reply_text("➜ `/welcome on/off`?")
     set_welcome_status(update.effective_chat.id, context.args[0].lower() == "on")
     await update.message.reply_text(f"✅ Welcome: **{context.args[0].upper()}**")
-
-def register_all_handlers(app: Application):
-    app.add_handler(CommandHandler("start", start_handler))
-    app.add_handler(CommandHandler("help", help_handler))
-    app.add_handler(CommandHandler("clone", clone_bot))
-    app.add_handler(CommandHandler("delclone", delclone_bot))
-    app.add_handler(CommandHandler("chatbot", chatbot_toggle))
-    app.add_handler(CommandHandler("welcome", welcome_toggle))
-    app.add_handler(CommandHandler("ping", ping_cmd))
-    app.add_handler(CommandHandler("ban", ban_user))
-    app.add_handler(CommandHandler("mute", mute_user))
-    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member_action))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_main_reply))
 
 async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     s = time.time()
@@ -180,9 +189,41 @@ async def welcome_member_action(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def chatbot_main_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text: return
+    
+    # Run NSFW Check first
+    if await anti_nsfw_delete(update, context):
+        return
+
     if update.effective_chat.type != "private" and not get_chat_status(update.effective_chat.id): return
+    
     await context.bot.send_chat_action(update.effective_chat.id, "typing")
-    await update.message.reply_text(await get_unlimited_ai_reply(update.message.text))
+    reply = await get_unlimited_ai_reply(update.message.text)
+    await update.message.reply_text(reply)
+
+# =========================
+# ⚙️ REGISTRATION
+# =========================
+
+def register_all_handlers(app: Application):
+    # Admin & Commands
+    app.add_handler(CommandHandler("start", start_handler))
+    app.add_handler(CommandHandler("help", help_handler))
+    app.add_handler(CommandHandler("clone", clone_bot))
+    app.add_handler(CommandHandler("delclone", delclone_bot))
+    app.add_handler(CommandHandler("chatbot", chatbot_toggle))
+    app.add_handler(CommandHandler("welcome", welcome_toggle))
+    app.add_handler(CommandHandler("ping", ping_cmd))
+    app.add_handler(CommandHandler("ban", ban_user))
+    app.add_handler(CommandHandler("unban", unban_user))
+    app.add_handler(CommandHandler("mute", mute_user))
+    app.add_handler(CommandHandler("unmute", unmute_user))
+
+    # Media & NSFW filtering
+    app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO | filters.ANIMATION, anti_nsfw_delete))
+    
+    # Welcome & Chatbot
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member_action))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_main_reply))
 
 CLONE_COMMANDS = [
     BotCommand("start", "Start Bot"),
