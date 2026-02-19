@@ -1,9 +1,7 @@
 import logging
 import asyncio
 import sys
-import time
 
-# Standard Telegram Imports
 from telegram import BotCommand, Update
 from telegram.ext import (
     Application,
@@ -14,22 +12,28 @@ from telegram.ext import (
     ContextTypes
 )
 
-# Custom Imports
-from .config import TOKEN, OWNER_ID, LOGGER_GROUP, CLONE_LOGGER
-from .database import get_all_bots, add_user, get_all_users
+# =========================
+# IMPORTS
+# =========================
+
+from .config import TOKEN, LOGGER_GROUP
+from .database import get_all_bots, add_user
+
 from .modules.chatbot import chatbot_reply, chatbot_toggle
 from .modules.welcome import (
-    welcome_toggle, 
-    welcome_member, 
-    master_start, 
+    welcome_toggle,
+    welcome_member,
+    master_start,
     help_callback
 )
+
 from .modules.cloner import (
     clone_bot,
     delclone_bot,
     anti_nsfw_delete,
     broadcast_handler
 )
+
 from .modules.admin import (
     ban_user,
     unban_user,
@@ -38,123 +42,154 @@ from .modules.admin import (
     promote_user,
     get_admin_list
 )
+
 from .modules.ping import ping_handler, ping_callback_handler
 
+
 # =========================
-# 🔄 LOGGER SYSTEM (FIXED FOR OFFSET ERRORS)
+# LOGGER (SAFE)
 # =========================
 
 async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Naye user ka log group mein bhejta hai - Fixed for HTML safety"""
+
     if not update.effective_user:
         return
-    
+
     user = update.effective_user
-    bot = context.bot
-    
-    # Database mein save karein
     add_user(user.id)
-    
-    # Sirf /start par logger message bhejne ke liye logic
+
+    # only log real /start
     if update.message and update.message.text == "/start":
-        # HTML use kar rahe hain taaki byte offset error na aaye
+
         text = (
-            "👤 <b>NEW USER STARTED!</b>\n\n"
-            f"🤖 <b>Bot:</b> @{bot.username}\n"
-            f"🆔 <b>User ID:</b> <code>{user.id}</code>\n"
-            f"📝 <b>Name:</b> {user.first_name}\n"
-            f"🏷 <b>Username:</b> @{user.username if user.username else 'N/A'}"
+            "👤 <b>NEW START</b>\n\n"
+            f"🤖 Bot: @{context.bot.username}\n"
+            f"🆔 <code>{user.id}</code>\n"
+            f"📝 {user.first_name}"
         )
+
         try:
-            # Markdown se HTML par switch kiya
-            await context.bot.send_message(chat_id=LOGGER_GROUP, text=text, parse_mode="HTML")
+            await context.bot.send_message(
+                LOGGER_GROUP,
+                text,
+                parse_mode="HTML"
+            )
         except Exception as e:
-            logging.error(f"Logger Error: {e}")
+            logging.error(e)
+
 
 # =========================
-# REGISTER ALL HANDLERS
+# HANDLER REGISTER
 # =========================
+
 def register_all_handlers(app: Application):
-    # 1. LOGGER & AUTO SAVE (Priority 0)
-    app.add_handler(MessageHandler(filters.ALL, log_user_start), group=0)
 
-    # 2. START & HELP
-    app.add_handler(CommandHandler("start", master_start))
-    app.add_handler(CommandHandler("help", help_callback))
-    app.add_handler(CallbackQueryHandler(master_start, pattern="start_back"))
-    app.add_handler(CallbackQueryHandler(help_callback, pattern="help_back"))
+    # ---- COMMANDS FIRST ----
+    app.add_handler(CommandHandler("start", master_start), group=0)
+    app.add_handler(CommandHandler("help", help_callback), group=0)
+    app.add_handler(CommandHandler("ping", ping_handler), group=0)
 
-    # 3. PING
-    app.add_handler(CommandHandler("ping", ping_handler))
-    app.add_handler(CallbackQueryHandler(ping_callback_handler, pattern="close_ping"))
+    app.add_handler(CommandHandler("clone", clone_bot), group=0)
+    app.add_handler(CommandHandler("delclone", delclone_bot), group=0)
+    app.add_handler(CommandHandler("broadcast", broadcast_handler), group=0)
 
-    # 4. CLONE SYSTEM
-    app.add_handler(CommandHandler("clone", clone_bot))
-    app.add_handler(CommandHandler("delclone", delclone_bot))
+    app.add_handler(CommandHandler("chatbot", chatbot_toggle), group=0)
+    app.add_handler(CommandHandler("welcome", welcome_toggle), group=0)
 
-    # 5. ADMIN SYSTEM
-    app.add_handler(CommandHandler("ban", ban_user))
-    app.add_handler(CommandHandler("unban", unban_user))
-    app.add_handler(CommandHandler("mute", mute_user))
-    app.add_handler(CommandHandler("unmute", unmute_user))
-    app.add_handler(CommandHandler("promote", promote_user))
-    app.add_handler(CommandHandler("adminlist", get_admin_list))
+    app.add_handler(CommandHandler("ban", ban_user), group=0)
+    app.add_handler(CommandHandler("unban", unban_user), group=0)
+    app.add_handler(CommandHandler("mute", mute_user), group=0)
+    app.add_handler(CommandHandler("unmute", unmute_user), group=0)
+    app.add_handler(CommandHandler("promote", promote_user), group=0)
+    app.add_handler(CommandHandler("adminlist", get_admin_list), group=0)
 
-    # 6. FEATURES
-    app.add_handler(CommandHandler("broadcast", broadcast_handler))
-    app.add_handler(CommandHandler("chatbot", chatbot_toggle))
-    app.add_handler(CommandHandler("welcome", welcome_toggle))
+    # ---- CALLBACKS ----
+    app.add_handler(CallbackQueryHandler(master_start, pattern="start_back"), group=1)
+    app.add_handler(CallbackQueryHandler(help_callback, pattern="help_back"), group=1)
+    app.add_handler(CallbackQueryHandler(ping_callback_handler, pattern="close_ping"), group=1)
 
-    # 7. CHATBOT & WELCOME
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply))
-    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member))
+    # ---- LOGGER (after commands) ----
+    app.add_handler(MessageHandler(filters.ALL, log_user_start), group=2)
 
-    # 8. ANTI-NSFW
-    app.add_handler(MessageHandler(
-        (filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Sticker.ALL) & ~filters.COMMAND,
-        anti_nsfw_delete
-    ), group=1)
+    # ---- NSFW FILTER ----
+    app.add_handler(
+        MessageHandler(
+            filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Sticker.ALL,
+            anti_nsfw_delete
+        ),
+        group=3
+    )
+
+    # ---- WELCOME ----
+    app.add_handler(
+        MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member),
+        group=4
+    )
+
+    # ---- CHATBOT LAST ----
+    app.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply),
+        group=5
+    )
+
 
 # =========================
-# UI & RUN
+# UI COMMANDS
 # =========================
+
 async def set_ui_commands(bot):
-    commands = [
-        BotCommand("start", "Start the bot"),
-        BotCommand("ping", "Check speed ⚡"),
-        BotCommand("clone", "Create bot clone 🚀"),
-        BotCommand("delclone", "Delete clone 🗑"),
+    await bot.set_my_commands([
+        BotCommand("start", "Start bot"),
+        BotCommand("ping", "Check speed"),
+        BotCommand("clone", "Clone bot"),
+        BotCommand("delclone", "Delete clone"),
         BotCommand("chatbot", "Toggle AI"),
-    ]
-    await bot.set_my_commands(commands)
+        BotCommand("broadcast", "Broadcast")
+    ])
 
-async def restart_clones(main_app: Application):
+
+# =========================
+# RESTART CLONES
+# =========================
+
+async def restart_clones():
+
     bots = get_all_bots()
+
     for bot in bots:
         try:
-            # Ensure proper app builder for clones
             clone_app = Application.builder().token(bot["token"]).build()
             register_all_handlers(clone_app)
             await clone_app.initialize()
             await clone_app.start()
+            print("Clone restarted:", bot["username"])
         except Exception as e:
-            logging.error(f"Failed to restart clone: {e}")
+            logging.error(e)
+
+
+# =========================
+# MAIN
+# =========================
 
 def main():
-    if not TOKEN: sys.exit(1)
-    # Using 'import asyncio' properly in main call
+
+    if not TOKEN:
+        sys.exit("TOKEN missing")
+
     app = Application.builder().token(TOKEN).build()
+
     register_all_handlers(app)
 
-    async def post_init(application: Application):
-        await set_ui_commands(application.bot)
-        await restart_clones(application)
+    async def post_init(app):
+        await set_ui_commands(app.bot)
+        await restart_clones()
 
-    loop = asyncio.get_event_loop()
-    loop.create_task(post_init(app))
-    
-    print("⚡ BOT STARTED & LOGGER ACTIVE ⚡")
+    app.post_init = post_init
+
+    print("⚡ BOT RUNNING ⚡")
+
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()
