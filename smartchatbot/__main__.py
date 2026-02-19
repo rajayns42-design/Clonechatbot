@@ -46,8 +46,11 @@ from .modules.admin import (
 from .modules.ping import ping_handler, ping_callback_handler
 
 
+logging.basicConfig(level=logging.INFO)
+
+
 # =========================
-# LOGGER (SAFE)
+# LOGGER
 # =========================
 
 async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -58,8 +61,8 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     add_user(user.id)
 
-    # only log real /start
-    if update.message and update.message.text == "/start":
+    # log only /start
+    if update.message and update.message.text and update.message.text.startswith("/start"):
 
         text = (
             "👤 <b>NEW START</b>\n\n"
@@ -79,12 +82,12 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # =========================
-# HANDLER REGISTER
+# HANDLERS
 # =========================
 
 def register_all_handlers(app: Application):
 
-    # ---- COMMANDS FIRST ----
+    # -------- COMMANDS --------
     app.add_handler(CommandHandler("start", master_start), group=0)
     app.add_handler(CommandHandler("help", help_callback), group=0)
     app.add_handler(CommandHandler("ping", ping_handler), group=0)
@@ -103,15 +106,15 @@ def register_all_handlers(app: Application):
     app.add_handler(CommandHandler("promote", promote_user), group=0)
     app.add_handler(CommandHandler("adminlist", get_admin_list), group=0)
 
-    # ---- CALLBACKS ----
-    app.add_handler(CallbackQueryHandler(master_start, pattern="start_back"), group=1)
-    app.add_handler(CallbackQueryHandler(help_callback, pattern="help_back"), group=1)
-    app.add_handler(CallbackQueryHandler(ping_callback_handler, pattern="close_ping"), group=1)
+    # -------- CALLBACKS --------
+    app.add_handler(CallbackQueryHandler(master_start, pattern="^start"), group=1)
+    app.add_handler(CallbackQueryHandler(help_callback, pattern="^help"), group=1)
+    app.add_handler(CallbackQueryHandler(ping_callback_handler, pattern="^close_ping"), group=1)
 
-    # ---- LOGGER (after commands) ----
+    # -------- LOGGER --------
     app.add_handler(MessageHandler(filters.ALL, log_user_start), group=2)
 
-    # ---- NSFW FILTER ----
+    # -------- NSFW --------
     app.add_handler(
         MessageHandler(
             filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Sticker.ALL,
@@ -120,13 +123,13 @@ def register_all_handlers(app: Application):
         group=3
     )
 
-    # ---- WELCOME ----
+    # -------- WELCOME --------
     app.add_handler(
         MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member),
         group=4
     )
 
-    # ---- CHATBOT LAST ----
+    # -------- CHATBOT LAST --------
     app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply),
         group=5
@@ -140,11 +143,14 @@ def register_all_handlers(app: Application):
 async def set_ui_commands(bot):
     await bot.set_my_commands([
         BotCommand("start", "Start bot"),
+        BotCommand("help", "Help menu"),
         BotCommand("ping", "Check speed"),
         BotCommand("clone", "Clone bot"),
         BotCommand("delclone", "Delete clone"),
+        BotCommand("broadcast", "Broadcast"),
         BotCommand("chatbot", "Toggle AI"),
-        BotCommand("broadcast", "Broadcast")
+        BotCommand("welcome", "Welcome toggle"),
+        BotCommand("adminlist", "Admins list"),
     ])
 
 
@@ -162,9 +168,29 @@ async def restart_clones():
             register_all_handlers(clone_app)
             await clone_app.initialize()
             await clone_app.start()
-            print("Clone restarted:", bot["username"])
+            print("Clone restarted:", bot.get("username"))
         except Exception as e:
             logging.error(e)
+
+
+# =========================
+# POST INIT
+# =========================
+
+async def post_init(app: Application):
+
+    await set_ui_commands(app.bot)
+    await restart_clones()
+
+    # ✅ BOT ONLINE LOGGER
+    try:
+        await app.bot.send_message(
+            LOGGER_GROUP,
+            f"🟢 <b>BOT ONLINE</b>\n\n🤖 @{app.bot.username} running",
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        logging.error(e)
 
 
 # =========================
@@ -176,15 +202,9 @@ def main():
     if not TOKEN:
         sys.exit("TOKEN missing")
 
-    app = Application.builder().token(TOKEN).build()
+    app = Application.builder().token(TOKEN).post_init(post_init).build()
 
     register_all_handlers(app)
-
-    async def post_init(app):
-        await set_ui_commands(app.bot)
-        await restart_clones()
-
-    app.post_init = post_init
 
     print("⚡ BOT RUNNING ⚡")
 
