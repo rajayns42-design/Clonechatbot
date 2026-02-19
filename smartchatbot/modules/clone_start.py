@@ -1,11 +1,9 @@
-import asyncio
 import time
 
 from telegram import (
     Update,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    BotCommand
 )
 
 from telegram.ext import (
@@ -18,7 +16,7 @@ from telegram.ext import (
 )
 
 # =========================
-# CONFIG & DATABASE IMPORTS
+# CONFIG
 # =========================
 
 from ..config import (
@@ -32,10 +30,7 @@ from ..config import (
 
 from ..database import (
     add_cloned_bot,
-    remove_cloned_bot,
     users_collection,
-    get_chat_status,
-    set_chat_status
 )
 
 from .welcome import welcome_member
@@ -44,142 +39,156 @@ from .chatbot import chatbot_reply
 
 
 # =========================
-# 🔄 LOGGER SYSTEM
+# LOGGER
 # =========================
 
 async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.effective_user:
-        return
-
-    user = update.effective_user
-    bot = await context.bot.get_me()
-
-    text = (
-        "👤 <b>NEW START</b>\n\n"
-        f"🤖 Bot: {bot.first_name}\n"
-        f"🆔 User: <code>{user.id}</code>\n"
-        f"📝 Name: {user.first_name}\n"
-        f"🏷 Username: @{user.username if user.username else 'N/A'}"
-    )
-
     try:
-        await context.bot.send_message(
-            LOGGER_GROUP,
-            text,
-            parse_mode="HTML"
+        if not update.effective_user:
+            return
+
+        user = update.effective_user
+        bot = await context.bot.get_me()
+
+        text = (
+            "👤 <b>NEW START</b>\n\n"
+            f"🤖 Bot: {bot.first_name}\n"
+            f"🆔 User: <code>{user.id}</code>\n"
+            f"📝 {user.first_name}"
         )
+
+        await context.bot.send_message(LOGGER_GROUP, text, parse_mode="HTML")
+
     except:
         pass
 
 
 # =========================
-# ⚡ PING
+# ⚡ STYLISH PING
 # =========================
 
 async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     start = time.time()
-    msg = await update.message.reply_text("⚡")
-    end = time.time()
+    temp = await update.message.reply_text("⚡")
 
-    ms = round((end - start) * 1000, 2)
+    ms = round((time.time() - start) * 1000, 3)
+    bot = await context.bot.get_me()
 
-    await msg.edit_text(
-        f"Pong — <code>{ms} ms</code>",
-        parse_mode="HTML"
+    text = (
+        "ʜᴇʏ ʙᴀʙʏ!!\n"
+        f"<b>{bot.first_name}</b> is alive 🌹 and working fine\n"
+        "WITH A PING OF\n"
+        f"➥ <code>{ms} ms</code>\n\n"
+        "ᴍᴀᴅᴇ ᴡɪᴛʜ ❤️ ʙʏ Aditya"
+    )
+
+    buttons = [
+        [InlineKeyboardButton(
+            "ADD ME BABY",
+            url=f"https://t.me/{bot.username}?startgroup=true"
+        )],
+        [InlineKeyboardButton("CLOSE", callback_data="close_ping")]
+    ]
+
+    await temp.delete()
+
+    await update.message.reply_photo(
+        photo=START_IMG,
+        caption=text,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(buttons)
     )
 
 
+async def close_ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+    await update.callback_query.message.delete()
+
+
+async def ping_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+    # fake message wrapper so ping_cmd reuse ho sake
+    update.message = update.callback_query.message
+    await ping_cmd(update, context)
+
+
 # =========================
-# 🌟 START HANDLER
+# START (PROFILE PHOTO)
 # =========================
 
 async def clone_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if update.callback_query:
+        await update.callback_query.answer()
+
     user = update.effective_user
     bot = await context.bot.get_me()
 
     await log_user_start(update, context)
 
-    # -------- owner lookup from clone db ----------
-    clone_owner_id = OWNER_ID
-    try:
-        data = users_collection.find_one({"bot_id": bot.id})
-        if data:
-            clone_owner_id = data["owner_id"]
-    except:
-        pass
+    owner_id = OWNER_ID
+    data = users_collection.find_one({"bot_id": bot.id})
+    if data:
+        owner_id = data["owner_id"]
 
-    owner_url = f"tg://user?id={clone_owner_id}"
+    owner_url = f"tg://user?id={owner_id}"
 
-    # -------- profile photo fallback ----------
-    user_photo = START_IMG
+    # get user dp
+    photo_id = START_IMG
     try:
         photos = await context.bot.get_user_profile_photos(user.id)
         if photos.total_count > 0:
-            user_photo = photos.photos[0][-1].file_id
+            photo_id = photos.photos[0][-1].file_id
     except:
         pass
 
-    # -------- buttons ----------
     buttons = [
-        [
-            InlineKeyboardButton(
-                "ADD ME BABY 💖",
-                url=f"https://t.me/{bot.username}?startgroup=true"
-            )
-        ],
+        [InlineKeyboardButton("➕ ADD ME", url=f"https://t.me/{bot.username}?startgroup=true")],
         [
             InlineKeyboardButton("📢 UPDATE", url=UPDATE_CHANNEL),
             InlineKeyboardButton("💬 SUPPORT", url=SUPPORT_GROUP)
         ],
         [
-            InlineKeyboardButton("HELP 🛠", callback_data="back_start"),
-            InlineKeyboardButton("OWNER 👑", url=owner_url)
+            InlineKeyboardButton("🏓 PING", callback_data="ping_btn"),
+            InlineKeyboardButton("👑 OWNER", url=owner_url)
         ]
     ]
 
     text = (
-        f"Hey <a href='tg://user?id={user.id}'>{user.first_name}</a> ✨\n\n"
-        f"I'm <b>{bot.first_name}</b> 🤖\n\n"
-
-        "๏ <b>What Can I Do?</b>\n"
-        "➜ Smart AI Assistant\n"
-        "➜ Human-Like Conversations\n"
-        "➜ Multi Language Support\n"
-        "➜ Unlimited /Clone Features\n"
-        "➜ 24x7 Fast Response\n\n"
-
-        "๏ <b>How To Use Me?</b>\n"
-        "➜ Add Me To Your Group\n"
-        "➜ Use /chatbot on To Enable\n"
-        "➜ Use /chatbot off To Disable\n\n"
-
-        "➜ Click Help Button For More Commands 💜"
+        f"👋 Hey <a href='tg://user?id={user.id}'>{user.first_name}</a>\n\n"
+        f"🤖 I'm <b>{bot.first_name}</b>\n\n"
+        f"🆔 <code>{user.id}</code>\n"
+        f"🏷 @{user.username if user.username else 'NoUsername'}\n\n"
+        "AI Assistant • Chat • Clone • Smart Reply\n"
+        "Use /ping to check speed ⚡"
     )
 
-    try:
-        if update.message:
-            await update.message.reply_photo(
-                photo=user_photo,
-                caption=text,
-                parse_mode="HTML",
-                reply_markup=InlineKeyboardMarkup(buttons)
-            )
-        else:
+    if update.message:
+        await update.message.reply_photo(
+            photo=photo_id,
+            caption=text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+    else:
+        try:
             await update.callback_query.message.edit_caption(
                 caption=text,
                 parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup(buttons)
             )
-    except:
-        await update.message.reply_text(
-            text,
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        except:
+            await update.callback_query.message.reply_photo(
+                photo=photo_id,
+                caption=text,
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
 
 
 # =========================
-# 🤖 CLONE SYSTEM
+# CLONE
 # =========================
 
 async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -189,12 +198,10 @@ async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     token = context.args[0]
     user = update.effective_user
-
     msg = await update.message.reply_text("Booting Clone...")
 
     try:
         app = Application.builder().token(token).build()
-
         register_all_handlers(app)
 
         await app.initialize()
@@ -204,32 +211,19 @@ async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         add_cloned_bot(user.id, token, me.username, me.id)
 
-        # clone logger
-        try:
-            await context.bot.send_message(
-                CLONE_LOGGER,
-                f"🚀 Clone Created\nBot: @{me.username}\nOwner: {user.id}"
-            )
-        except:
-            pass
+        await context.bot.send_message(
+            CLONE_LOGGER,
+            f"🚀 Clone Created\nBot: @{me.username}\nOwner: {user.id}"
+        )
 
-        await msg.edit_text(f"Clone Ready: @{me.username}")
+        await msg.edit_text(f"✅ Clone Ready: @{me.username}")
 
     except Exception as e:
-        await msg.edit_text(f"Error: {e}")
+        await msg.edit_text(f"❌ {e}")
 
 
 # =========================
-# ❌ CLOSE BUTTON
-# =========================
-
-async def close_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.callback_query.answer()
-    await update.callback_query.message.delete()
-
-
-# =========================
-# ⚙️ REGISTER HANDLERS
+# REGISTER HANDLERS
 # =========================
 
 def register_all_handlers(app: Application):
@@ -238,22 +232,24 @@ def register_all_handlers(app: Application):
     app.add_handler(CommandHandler("clone", clone_bot))
     app.add_handler(CommandHandler("ping", ping_cmd))
 
-    # admin
     app.add_handler(CommandHandler("ban", ban_user))
     app.add_handler(CommandHandler("unban", unban_user))
     app.add_handler(CommandHandler("mute", mute_user))
     app.add_handler(CommandHandler("unmute", unmute_user))
 
-    # callbacks
-    app.add_handler(CallbackQueryHandler(close_callback, pattern="close_msg"))
-    app.add_handler(CallbackQueryHandler(clone_start_handler, pattern="back_start"))
+    app.add_handler(CallbackQueryHandler(close_ping, pattern="close_ping"))
+    app.add_handler(CallbackQueryHandler(ping_button, pattern="ping_btn"))
 
-    # welcome
     app.add_handler(
         MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member)
     )
 
-    # chatbot
+    async def safe_chat(update, context):
+        try:
+            await chatbot_reply(update, context)
+        except:
+            pass
+
     app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply)
-)
+        MessageHandler(filters.TEXT & ~filters.COMMAND, safe_chat)
+                        )
