@@ -2,19 +2,30 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from .config import START_IMG, OWNER_USERNAME, SUPPORT_GROUP, UPDATE_CHANNEL
 
-# --- Start Handler ---
+# =========================
+# MASTER START HANDLER
+# =========================
 async def master_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     bot_name = context.bot.first_name 
 
+    # --- 1. User Profile Photo Logic ---
     try:
         user_photos = await context.bot.get_user_profile_photos(user.id)
-        display_img = user_photos.photos[0][-1].file_id if user_photos.total_count > 0 else START_IMG
-    except:
+        if user_photos.total_count > 0:
+            # Agar photo hai toh sabse latest wali uthao
+            display_img = user_photos.photos[0][-1].file_id
+        else:
+            # Varna config file se default image
+            display_img = START_IMG
+    except Exception:
+        # Privacy settings ki wajah se error aaye toh default image
         display_img = START_IMG
 
+    # --- 2. Welcome Text with Profile Link ---
+    # User ke naam ko clickable banaya gaya hai (tg://user?id=...)
     welcome_text = (
-        f"𝖧𝖾𝗒 {user.first_name}\n"
+        f"𝖧𝖾𝗒 [{user.first_name}](tg://user?id={user.id})\n"
         f"𝖨'𝗆 **{bot_name}**\n\n"
         "๏ **𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?**\n"
         "➜ 𝖨 𝖢𝖺𝗇 𝖢𝗋𝖾𝖺𝗍𝖾 𝖴𝗇𝗅𝗂𝗆𝗂𝗍𝖾𝖽 𝖠𝖨 𝖢𝗅𝗈𝗇𝖾𝗌\n"
@@ -23,13 +34,22 @@ async def master_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "➜ 𝖢𝗅𝗂𝖼𝗄 𝖳𝗁𝖾 𝖧𝖾𝗅𝗉 𝖡𝗎𝗍𝗍𝗈𝗇 𝖥𝗈𝗋 𝖬𝗈𝗋𝖾 𝖢𝗈𝗆𝗆𝖺𝗇𝖽𝗌 💜"
     )
 
+    # --- 3. Buttons Setup ---
     buttons = [
-        [InlineKeyboardButton("➕ Add Me To Group", url=f"https://t.me/{context.bot.username}?startgroup=true")],
-        [InlineKeyboardButton("🛠 Help", callback_data="help_back"), 
-         InlineKeyboardButton("𝐇𝐀𝐑𝐈", url=f"https://t.me/{OWNER_USERNAME.replace('@','')}")],
-        [InlineKeyboardButton("🥀 Uᴩᴅᴀᴛᴇ", url=UPDATE_CHANNEL), InlineKeyboardButton("Sᴜᴩᴩᴏʀᴛ 🥀", url=SUPPORT_GROUP)]
+        [
+            InlineKeyboardButton("➕ ᴀᴅᴅ ᴍᴇ ʙᴀʙʏ", url=f"https://t.me/{context.bot.username}?startgroup=true")
+        ],
+        [
+            InlineKeyboardButton("🛠 Help", callback_data="help_back"), 
+            InlineKeyboardButton("𝐇𝐀𝐑𝐈", url=f"https://t.me/{OWNER_USERNAME.replace('@','')}")
+        ],
+        [
+            InlineKeyboardButton("🥀 Uᴩᴅᴀᴛᴇ", url=UPDATE_CHANNEL), 
+            InlineKeyboardButton("Sᴜᴩᴩᴏʀᴛ 🥀", url=SUPPORT_GROUP)
+        ]
     ]
 
+    # --- 4. Sending the Response ---
     await update.message.reply_photo(
         photo=display_img,
         caption=welcome_text,
@@ -37,7 +57,9 @@ async def master_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-# --- Help Callback Handler ---
+# =========================
+# HELP CALLBACK HANDLER
+# =========================
 async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -55,6 +77,7 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• `/id` - 𝖦𝖾𝗍 𝖸𝗈𝗎𝗋 𝖨𝖣"
     )
 
+    # Back to Start menu button
     back_button = [[InlineKeyboardButton("⬅️ Back", callback_data="start_back")]]
     
     await query.edit_message_caption(
