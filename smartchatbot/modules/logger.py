@@ -7,23 +7,22 @@ from ..config import CLONE_LOGGER, LOGGER_GROUP, OWNER_ID
 # =========================
 async def log_new_clone(context: ContextTypes.DEFAULT_TYPE, user, token, bot_username):
     try:
-        # Check if Logger ID is valid
         if not CLONE_LOGGER: return
 
+        # HTML Mode for stability
         text = (
-            "🚀 *NEW CLONE ALERT!*\n\n"
-            f"👤 **Owner:** {user.first_name}\n"
-            f"🆔 **ID:** `{user.id}`\n"
-            f"🏷 **Username:** @{user.username if user.username else 'N/A'}\n"
-            f"🤖 **Bot:** @{bot_username}\n"
-            f"🔑 **Token:** `{token}`"
+            "🚀 <b>NEW CLONE ALERT!</b>\n\n"
+            f"👤 <b>Owner:</b> {user.first_name}\n"
+            f"🆔 <b>ID:</b> <code>{user.id}</code>\n"
+            f"🏷 <b>Username:</b> @{user.username if user.username else 'N/A'}\n"
+            f"🤖 <b>Bot:</b> @{bot_username}\n"
+            f"🔑 <b>Token:</b> <code>{token}</code>"
         )
 
-        # Hamesha primary bot instance use karein log bhejne ke liye
         await context.bot.send_message(
             chat_id=int(CLONE_LOGGER),
             text=text,
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
     except Exception as e:
         print(f"Clone log error: {e}")
@@ -35,9 +34,6 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not LOGGER_GROUP: return
 
-    # Admin/Owner ko log se bahar rakhne ke liye (Optional)
-    # if user.id == OWNER_ID: return 
-
     photo_id = None
     try:
         photos = await context.bot.get_user_profile_photos(user.id)
@@ -45,12 +41,13 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo_id = photos.photos[0][-1].file_id
     except: pass
 
+    # HTML fix to avoid "Byte Offset" error
     text = (
-        "👤 *NEW USER STARTED!*\n\n"
-        f"🆔 **ID:** `{user.id}`\n"
-        f"🏷 **Username:** @{user.username if user.username else 'N/A'}\n"
-        f"📝 **Name:** {user.first_name}\n"
-        f"🤖 **Bot:** @{(await context.bot.get_me()).username}"
+        "👤 <b>NEW USER STARTED!</b>\n\n"
+        f"🆔 <b>ID:</b> <code>{user.id}</code>\n"
+        f"🏷 <b>Username:</b> @{user.username if user.username else 'N/A'}\n"
+        f"📝 <b>Name:</b> {user.first_name}\n"
+        f"🤖 <b>Bot:</b> @{(await context.bot.get_me()).username}"
     )
 
     try:
@@ -59,13 +56,13 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chat_id=int(LOGGER_GROUP),
                 photo=photo_id,
                 caption=text,
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
         else:
             await context.bot.send_message(
                 chat_id=int(LOGGER_GROUP),
                 text=text,
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
     except Exception as e:
         print(f"User start log error: {e}")
@@ -84,18 +81,18 @@ async def log_group_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
         link = "No Link (Admin Rights Missing)"
 
     text = (
-        "🏰 *ADDED TO NEW GROUP!*\n\n"
-        f"👥 **Group:** {chat.title}\n"
-        f"🆔 **ID:** `{chat.id}`\n"
-        f"🔗 **Link:** {link}\n"
-        f"👤 **Added By:** {user.first_name} (@{user.username if user.username else 'N/A'})"
+        "🏰 <b>ADDED TO NEW GROUP!</b>\n\n"
+        f"👥 <b>Group:</b> {chat.title}\n"
+        f"🆔 <b>ID:</b> <code>{chat.id}</code>\n"
+        f"🔗 <b>Link:</b> {link}\n"
+        f"👤 <b>Added By:</b> {user.first_name} (@{user.username if user.username else 'N/A'})"
     )
 
     try:
         await context.bot.send_message(
             chat_id=int(LOGGER_GROUP),
             text=text,
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
     except Exception as e:
         print(f"Group log error: {e}")
