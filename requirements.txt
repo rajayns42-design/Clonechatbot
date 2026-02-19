@@ -1,5 +1,5 @@
-python-telegram-bot[job-queue]
-google-generativeai
+python-telegram-bot[job-queue]>=20.0
+google-generativeai>=0.8.0
 groq
 mistralai>=1.0.0
 python-dotenv
