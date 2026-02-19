@@ -1,92 +1,209 @@
-import asyncio
 import random
-import re
-import google.generativeai as genai
+from google import genai
+from groq import Groq
+from mistralai import Mistral
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
-# --- CONFIG & DATABASE IMPORTS ---
-from ..database import get_chat_status, set_chat_status
-from ..config import GEMINI_API_KEY, OWNER_ID
+# =========================
+# IMPORT YOUR CONFIG + DB
+# =========================
 
-# --- 1. AI Configuration (Tuned for Ultra-Short Replies) ---
-genai.configure(api_key=GEMINI_API_KEY)
-gemini_model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash',
-    generation_config={
-        "temperature": 0.8, 
-        "max_output_tokens": 20, # Response size chota rakhne ke liye
-    },
-    system_instruction=(
-        "Tera naam NATKHAT hai. Tu ek chulbuli ladki hai. "
-        "STRICT RULE: Reply should be ONLY 3 to 5 words. "
-        "Hinglish use kar aur 1 emoji daal. Quotes bilkul mat use kar."
-    )
+from ..database import get_chat_status, set_chat_status
+from ..config import (
+    GEMINI_API_KEY,
+    GROQ_API_KEY,
+    MISTRAL_API_KEY,
+    OWNER_ID
 )
 
-def clean_for_telegram(text):
-    """'Byte offset' error fix karne ke liye"""
-    # Saare quotes aur special symbols hatao jo parsing fail karte hain
-    text = text.replace('"', '').replace("'", "").replace('`', '').strip()
-    # HTML safe characters
-    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    return text
+# =========================
+# AI CLIENTS
+# =========================
 
-# --- 2. Short Reply Engine ---
-async def get_ai_reply(text):
-    prompt = f"Short Hinglish reply to: {text} (Max 5 words)"
+gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+groq_client = Groq(api_key=GROQ_API_KEY)
+mistral_client = Mistral(api_key=MISTRAL_API_KEY)
+
+SYSTEM_PROMPT = (
+    "Tera naam NATKHAT hai. Tu ek chulbuli ladki hai. "
+    "Reply only 3 to 5 Hinglish words with 1 emoji. No quotes."
+)
+
+# =========================
+# TEXT CLEANER
+# =========================
+
+def clean_for_telegram(text: str):
+    return (
+        text.replace('"', '')
+        .replace("'", "")
+        .replace("`", "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .strip()
+    )
+
+# =========================
+# GEMINI CALL
+# =========================
+
+async def ask_gemini(user_text):
     try:
-        res = gemini_model.generate_content(prompt)
-        if res.text:
-            # Sirf pehli line aur clean text
-            return clean_for_telegram(res.text.split('\n')[0])
-    except:
-        pass
-    return random.choice(["Ofo, nakhre! 😉", "Arey wah! ✨", "Tum bhi na.. 🙈"])
+        r = gemini_client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=f"{SYSTEM_PROMPT}\nUser:{user_text}\nReply:",
+            config={"max_output_tokens": 20, "temperature": 0.8}
+        )
+        if r.text:
+            print("AI → Gemini")
+            return clean_for_telegram(r.text.split("\n")[0])
+    except Exception as e:
+        print("Gemini fail:", e)
 
-# --- 3. Chatbot Toggle ---
+
+# =========================
+# GROQ CALL
+# =========================
+
+async def ask_groq(user_text):
+    try:
+        r = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_text}
+            ],
+            max_tokens=20,
+            temperature=0.8
+        )
+        print("AI → Groq")
+        return clean_for_telegram(r.choices[0].message.content)
+    except Exception as e:
+        print("Groq fail:", e)
+
+
+# =========================
+# MISTRAL CALL
+# =========================
+
+async def ask_mistral(user_text):
+    try:
+        r = mistral_client.chat.complete(
+            model="mistral-small-latest",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_text}
+            ],
+            max_tokens=20,
+            temperature=0.8
+        )
+        print("AI → Mistral")
+        return clean_for_telegram(r.choices[0].message.content)
+    except Exception as e:
+        print("Mistral fail:", e)
+
+
+# =========================
+# MASTER FALLBACK ENGINE
+# =========================
+
+async def get_ai_reply(text):
+
+    reply = await ask_gemini(text)
+    if reply:
+        return reply
+
+    reply = await ask_groq(text)
+    if reply:
+        return reply
+
+    reply = await ask_mistral(text)
+    if reply:
+        return reply
+
+    return random.choice([
+        "Network sharma gaya 😅",
+        "Phir bol na 😉",
+        "Sun rahi hu 😌",
+        "Acha ji tum 😜"
+    ])
+
+# =========================
+# /chatbot ON OFF COMMAND
+# =========================
+
 async def chatbot_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     user = update.effective_user
-    
+
     if chat.type == "private":
-        return await update.message.reply_text("Jaan, PM mein toh main hamesha on hi hoon! 😉")
+        return await update.message.reply_text(
+            "PM me toh main always on 😉"
+        )
 
     try:
         member = await context.bot.get_chat_member(chat.id, user.id)
-        if member.status not in ['administrator', 'creator'] and user.id != OWNER_ID:
-            return await update.message.reply_text("❌ Admin power chahiye baby!")
-    except: return
-
-    action = context.args[0].lower() if context.args else ""
-    if action == "on":
-        set_chat_status(chat.id, True)
-        await update.message.reply_text("✅ <b>NATKHAT ON!</b> Masti shuru. 😉", parse_mode="HTML")
-    elif action == "off":
-        set_chat_status(chat.id, False)
-        await update.message.reply_text("📴 <b>NATKHAT OFF!</b> Bye bye. 🥀", parse_mode="HTML")
-
-# --- 4. Main Reply Handler ---
-async def chatbot_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.text: return
-    
-    chat_id = update.effective_chat.id
-    # Check if chatbot is on for groups
-    if update.effective_chat.type != "private" and not get_chat_status(chat_id):
+        if member.status not in ["administrator", "creator"] and user.id != OWNER_ID:
+            return await update.message.reply_text("❌ Admin only command")
+    except:
         return
 
-    is_reply = (update.message.reply_to_message and 
-                update.message.reply_to_message.from_user.id == context.bot.id)
-    
-    # Private chat, reply to bot, or tagging bot
-    if update.effective_chat.type == "private" or is_reply or f"@{context.bot.username}" in update.message.text:
-        await context.bot.send_chat_action(chat_id=chat_id, action="typing")
-        user_input = update.message.text.replace(f"@{context.bot.username}", "").strip()
-        
-        reply = await get_ai_reply(user_input)
-        
+    action = context.args[0].lower() if context.args else ""
+
+    if action == "on":
+        set_chat_status(chat.id, True)
+        await update.message.reply_text(
+            "✅ <b>NATKHAT ON</b> 😉",
+            parse_mode="HTML"
+        )
+
+    elif action == "off":
+        set_chat_status(chat.id, False)
+        await update.message.reply_text(
+            "📴 <b>NATKHAT OFF</b>",
+            parse_mode="HTML"
+        )
+
+# =========================
+# MAIN MESSAGE HANDLER
+# =========================
+
+async def chatbot_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not update.message or not update.message.text:
+        return
+
+    chat = update.effective_chat
+    chat_id = chat.id
+
+    # group off check
+    if chat.type != "private" and not get_chat_status(chat_id):
+        return
+
+    is_reply_to_bot = (
+        update.message.reply_to_message and
+        update.message.reply_to_message.from_user.id == context.bot.id
+    )
+
+    is_tagged = f"@{context.bot.username}" in update.message.text
+
+    if chat.type == "private" or is_reply_to_bot or is_tagged:
+
+        await context.bot.send_chat_action(
+            chat_id=chat_id,
+            action="typing"
+        )
+
+        text = update.message.text.replace(
+            f"@{context.bot.username}", ""
+        ).strip()
+
+        reply = await get_ai_reply(text)
+
         try:
-            # HTML mode offset errors ke liye sabse best hai
             await update.message.reply_text(reply, parse_mode="HTML")
         except:
             await update.message.reply_text(reply)
