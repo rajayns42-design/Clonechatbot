@@ -1,87 +1,148 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
+from telegram.ext import (
+    ContextTypes,
+    CommandHandler,
+    CallbackQueryHandler,
+    Application
+)
+
 from .config import START_IMG, OWNER_USERNAME, SUPPORT_GROUP, UPDATE_CHANNEL
 
+
 # =========================
-# MASTER START HANDLER
+# START HANDLER
 # =========================
+
 async def master_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    bot_name = context.bot.first_name 
+    bot = await context.bot.get_me()
 
-    # --- 1. User Profile Photo Logic ---
+    # ---------- USER PROFILE PHOTO ----------
     try:
-        user_photos = await context.bot.get_user_profile_photos(user.id)
-        if user_photos.total_count > 0:
-            # Agar photo hai toh sabse latest wali uthao
-            display_img = user_photos.photos[0][-1].file_id
+        photos = await context.bot.get_user_profile_photos(user.id)
+        if photos.total_count > 0:
+            display_img = photos.photos[0][-1].file_id
         else:
-            # Varna config file se default image
             display_img = START_IMG
-    except Exception:
-        # Privacy settings ki wajah se error aaye toh default image
+    except:
         display_img = START_IMG
 
-    # --- 2. Welcome Text with Profile Link ---
-    # User ke naam ko clickable banaya gaya hai (tg://user?id=...)
-    welcome_text = (
+    # ---------- TEXT ----------
+    text = (
         f"𝖧𝖾𝗒 [{user.first_name}](tg://user?id={user.id})\n"
-        f"𝖨'𝗆 **{bot_name}**\n\n"
-        "๏ **𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?**\n"
+        f"𝖨'𝗆 {bot_name}\n\n"
+        "๏ 𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?\n"
         "➜ 𝖨 𝖢𝖺𝗇 𝖢𝗋𝖾𝖺𝗍𝖾 𝖴𝗇𝗅𝗂𝗆𝗂𝗍𝖾𝖽 𝖠𝖨 𝖢𝗅𝗈𝗇𝖾𝗌\n"
         "➜ 𝖧𝗎𝗆𝖺𝗇-𝖫𝗂𝗄𝖾 𝖢𝗈𝗇𝗏𝖾𝗋𝗌𝖺𝗍𝗂𝗈𝗇𝗌\n"
         "➜ 𝖬𝗎𝗅𝗍𝗂 𝖫𝖺𝗇𝗀𝗎𝖺𝗀𝖾 𝖲𝗎𝗉𝗉𝗈𝗋𝗍\n\n"
         "➜ 𝖢𝗅𝗂𝖼𝗄 𝖳𝗁𝖾 𝖧𝖾𝗅𝗉 𝖡𝗎𝗍𝗍𝗈𝗇 𝖥𝗈𝗋 𝖬𝗈𝗋𝖾 𝖢𝗈𝗆𝗆𝖺𝗇𝖽𝗌 💜"
     )
 
-    # --- 3. Buttons Setup ---
+    # ---------- BUTTONS ----------
     buttons = [
         [
-            InlineKeyboardButton("➕ ᴀᴅᴅ ᴍᴇ ʙᴀʙʏ", url=f"https://t.me/{context.bot.username}?startgroup=true")
+            InlineKeyboardButton(
+                "➕ ADD ME",
+                url=f"https://t.me/{bot.username}?startgroup=true"
+            )
         ],
         [
-            InlineKeyboardButton("🛠 Help", callback_data="help_back"), 
-            InlineKeyboardButton("𝐇𝐀𝐑𝐈", url=f"https://t.me/{OWNER_USERNAME.replace('@','')}")
+            InlineKeyboardButton("🛠 Help", callback_data="help_menu"),
+            InlineKeyboardButton(
+                "👑 Owner",
+                url=f"https://t.me/{OWNER_USERNAME.replace('@','')}"
+            )
         ],
         [
-            InlineKeyboardButton("🥀 Uᴩᴅᴀᴛᴇ", url=UPDATE_CHANNEL), 
-            InlineKeyboardButton("Sᴜᴩᴩᴏʀᴛ 🥀", url=SUPPORT_GROUP)
+            InlineKeyboardButton("📢 Update", url=UPDATE_CHANNEL),
+            InlineKeyboardButton("💬 Support", url=SUPPORT_GROUP)
+        ],
+        [
+            InlineKeyboardButton("🏓 Ping", callback_data="ping_btn")
         ]
     ]
 
-    # --- 4. Sending the Response ---
-    await update.message.reply_photo(
-        photo=display_img,
-        caption=welcome_text,
-        reply_markup=InlineKeyboardMarkup(buttons),
-        parse_mode='Markdown'
-    )
+    # ---------- SEND ----------
+    if update.message:
+        await update.message.reply_photo(
+            photo=display_img,
+            caption=text,
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+    else:
+        await update.callback_query.message.reply_photo(
+            photo=display_img,
+            caption=text,
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+
 
 # =========================
-# HELP CALLBACK HANDLER
+# HELP MENU
 # =========================
+
 async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     help_text = (
-        "✨ **𝖧𝖾𝗅𝗉 & 𝖢𝗈𝗆𝗆𝖺𝗇𝖽𝗌** ✨\n\n"
-        "🤖 **𝖴𝗌𝖾𝗋 𝖢𝗈𝗆𝗆𝖺𝗇𝖽𝗌:**\n"
-        "• `/start` - 𝖲𝗍𝖺𝗋𝗍 𝖳𝗁𝖾 𝖡𝗈𝗍\n"
-        "• `/help` - 𝖦𝖾𝗍 𝖧𝖾𝗅𝗉 𝖬𝖾𝗇𝗎\n\n"
-        "⚙️ **𝖦𝗋𝗈𝗎𝗉 𝖢𝗈𝗆𝗆𝖺𝗇𝖽𝗌:**\n"
-        "• `/chatbot on` - 𝖤𝗇𝖺𝖻𝗅𝖾 𝖠𝖨\n"
-        "• `/chatbot off` - 𝖣𝗂𝗌𝖺𝖻𝗅𝖾 𝖠𝖨\n\n"
-        "🚀 **𝖢𝗅𝗈𝗇𝖾𝗋 𝖢𝗈𝗆𝗆𝖺𝗇𝖽𝗌:**\n"
-        "• `/clone [token]` - 𝖢𝗋𝖾𝖺𝗍𝖾 𝖢𝗅𝗈𝗇𝖾\n"
-        "• `/id` - 𝖦𝖾𝗍 𝖸𝗈𝗎𝗋 𝖨𝖣"
+        "✨ **HELP MENU** ✨\n\n"
+        "👤 User Commands:\n"
+        "/start — Start bot\n"
+        "/ping — Check speed\n\n"
+        "🤖 Clone:\n"
+        "/clone TOKEN — Create clone\n\n"
+        "⚙️ Group:\n"
+        "/chatbot on/off"
     )
 
-    # Back to Start menu button
-    back_button = [[InlineKeyboardButton("⬅️ Back", callback_data="start_back")]]
-    
+    back = [[InlineKeyboardButton("⬅️ Back", callback_data="start_back")]]
+
     await query.edit_message_caption(
         caption=help_text,
-        reply_markup=InlineKeyboardMarkup(back_button),
-        parse_mode='Markdown'
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(back)
     )
+
+
+# =========================
+# PING BUTTON
+# =========================
+
+import time
+
+async def ping_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    start = time.time()
+    ms = round((time.time() - start) * 1000, 2)
+
+    btn = [[InlineKeyboardButton("❌ Close", callback_data="close_ping")]]
+
+    await query.edit_message_caption(
+        caption=f"🏓 Pong!\n⚡ Speed: `{ms} ms`",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(btn)
+    )
+
+
+async def close_ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+    await update.callback_query.message.delete()
+
+
+# =========================
+# REGISTER HANDLERS
+# =========================
+
+def register_start_handlers(app: Application):
+
+    app.add_handler(CommandHandler("start", master_start))
+
+    app.add_handler(CallbackQueryHandler(help_callback, pattern="help_menu"))
+    app.add_handler(CallbackQueryHandler(master_start, pattern="start_back"))
+    app.add_handler(CallbackQueryHandler(ping_button, pattern="ping_btn"))
+    app.add_handler(CallbackQueryHandler(close_ping, pattern="close_ping"))
