@@ -331,7 +331,6 @@ def register_all_handlers(app: Application):
     
 CLONE_COMMANDS = [
     BotCommand("start", "Start Bot"),
-    BotCommand("help", "Help Menu"),
     BotCommand("ping", "Check Speed"),
     BotCommand("chatbot", "Toggle AI"),
     BotCommand("welcome", "Toggle Welcome"),
