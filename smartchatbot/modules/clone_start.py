@@ -1,174 +1,165 @@
+import asyncio
 import time
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+import random
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    BotCommand
+)
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
-    CallbackQueryHandler,
+    filters,
     ContextTypes,
-    filters
+    CallbackQueryHandler
 )
 
 # =========================
-# IMPORTS
+# CONFIG & DATABASE IMPORTS
 # =========================
-from smartchatbot.config import START_IMG, SUPPORT_GROUP, UPDATE_CHANNEL, OWNER_ID
-from modules.chatbot import chatbot_reply, chatbot_toggle
-from modules.welcome import welcome_toggle, welcome_member
+from ..config import (
+    OWNER_ID, GEMINI_API_KEY, LOGGER_GROUP, CLONE_LOGGER, 
+    START_IMG, SUPPORT_GROUP, UPDATE_CHANNEL
+)
+from ..database import (
+    add_cloned_bot, remove_cloned_bot, users_collection, 
+    set_welcome_status, get_welcome_status, get_chat_status, set_chat_status
+)
+from .welcome import welcome_member
+from .admin import ban_user, unban_user, mute_user, unmute_user
+from .chatbot import chatbot_reply 
 
 # =========================
-# ANTI MEDIA DELETE
+# 🔄 LOGGER SYSTEM
 # =========================
-async def anti_nsfw_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.effective_chat or not update.effective_user:
-        return
-    if update.effective_chat.type == "private":
-        return
 
+async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    bot = await context.bot.get_me()
+    text = (
+        "👤 **NEW USER STARTED!**\n\n"
+        f"🤖 **Bot Name:** {bot.first_name} (@{bot.username})\n"
+        f"🆔 **User ID:** `{user.id}`\n"
+        f"📝 **Name:** {user.first_name}\n"
+        f"🏷 **Username:** @{user.username if user.username else 'N/A'}"
+    )
     try:
-        member = await context.bot.get_chat_member(
-            update.effective_chat.id,
-            update.effective_user.id
+        await context.bot.send_message(chat_id=LOGGER_GROUP, text=text, parse_mode="Markdown")
+    except: pass
+
+# =========================
+# 🚀 PING & START HANDLERS (IMAGE STYLE)
+# =========================
+
+async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    start_time = time.time()
+    bot = await context.bot.get_me()
+    
+    # Message sending animation
+    msg = await update.message.reply_text("⚡")
+    
+    end_time = time.time()
+    ping_ms = round((end_time - start_time) * 1000, 3)
+    
+    # Image ke jaisa text format
+    text = (
+        f"нᴇу вαву!!\n"
+        f"╰─ **{bot.first_name}** 🍓 Is αℓινє 🥀 αη∂ ωᴏяᴋιηɢ\n"
+        f"ғιηє ωιтн α ριηɢ ᴏғ\n"
+        f"➡ {ping_ms} ms\n\n"
+        f"мα∂є ωιтн ❤️ ву   [𝐇𝐀𝐑𝐈 <3](tg://user?id={OWNER_ID}) 🥀"
+    )
+    
+    buttons = [
+        [InlineKeyboardButton("ADD ME BABY", url=f"https://t.me/{bot.username}?startgroup=true")],
+        [InlineKeyboardButton("CLOSE", callback_data="close_msg")]
+    ]
+    
+    # Agar START_IMG available hai toh photo ke saath bhejega
+    if START_IMG:
+        await update.message.reply_photo(
+            photo=START_IMG, 
+            caption=text, 
+            reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode="Markdown"
         )
+        await msg.delete()
+    else:
+        await msg.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons), parse_mode="Markdown")
 
-        if member.status in ["creator", "administrator"]:
-            return
-
-        if (
-            update.message.photo
-            or update.message.video
-            or update.message.animation
-            or update.message.sticker
-        ):
-            await update.message.delete()
-            warn = await update.effective_chat.send_message(
-                f"⚠️ {update.effective_user.first_name}, media not allowed here!"
-            )
-            
-            # Warning delete after 5 seconds
-            if context.job_queue:
-                context.job_queue.run_once(lambda c: warn.delete(), 5)
-
-    except Exception as e:
-        print("Anti media error:", e)
-
-
-# =========================
-# START MESSAGE (Profile Photo + Buttons)
-# =========================
 async def clone_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     bot = await context.bot.get_me()
+    await log_user_start(update, context)
 
-    # User ki profile photo nikalne ka logic
-    try:
-        photos = await context.bot.get_user_profile_photos(user.id)
-        if photos.total_count > 0:
-            # Sabse latest profile photo (index 0)
-            img = photos.photos[0][-1].file_id
-        else:
-            img = START_IMG
-    except Exception:
-        img = START_IMG
-
-    # Start text with user link
-    text = (
-        f"Hey [ {user.first_name} ](tg://user?id={user.id}) ✨\n\n"
-        f"I'm **{bot.first_name}** 🤖\n\n"
-        "➜ **Smart AI Chat Assistant**\n"
-        "➜ **Human like Hindi/English replies**\n"
-        "➜ **Super Fast & 24/7 Online**\n\n"
-        "**Add me to your group and use** `/chatbot on` ✅"
-    )
-
-    # Professional Buttons Layout
+    # Nelumi Style Buttons
     buttons = [
+        [InlineKeyboardButton("𝐀𝐃𝐃 𝐌𝐄 𝐁𝐀𝐁𝐘", url=f"https://t.me/{bot.username}?startgroup=true")],
         [
-            InlineKeyboardButton(
-                "➕ Add Me To Your Group",
-                url=f"https://t.me/{bot.username}?startgroup=true"
-            )
+            InlineKeyboardButton("𝐇𝐄𝐋𝐏", callback_data="clone_help"), 
+            InlineKeyboardButton("𝐇𝐀𝐑𝐈", url=f"tg://user?id={OWNER_ID}") 
         ],
         [
-            InlineKeyboardButton("🛠 Help", callback_data="clone_help"),
-            InlineKeyboardButton("👤 Owner", url=f"tg://user?id={OWNER_ID}")
-        ],
-        [
-            InlineKeyboardButton("📢 Updates", url=UPDATE_CHANNEL),
-            InlineKeyboardButton("💬 Support", url=SUPPORT_GROUP)
+            InlineKeyboardButton("📢 𝐔𝐏𝐃𝐀𝐓𝐄", url=UPDATE_CHANNEL),
+            InlineKeyboardButton("💬 𝐒𝐔𝐏𝐏𝐎𝐑𝐓", url=SUPPORT_GROUP)
         ]
     ]
-
-    await update.message.reply_photo(
-        photo=img,
-        caption=text,
-        reply_markup=InlineKeyboardMarkup(buttons),
-        parse_mode="Markdown"
+    
+    text = (
+        f"нᴇу [ {user.first_name} ](tg://user?id={user.id}) ✨\n\n"
+        f"I'm **{bot.first_name}** 🤖\n\n"
+        "๏ **𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?**\n"
+        "➜ 𝖨’𝗆 𝖠 𝖲𝗆𝖺𝗋𝗍 𝖠𝖨 𝖢𝗁𝖺𝗍 𝖠𝗌𝗌𝗂𝗌𝗍𝖺𝗇𝗍\n"
+        "➜ 𝖧𝗎𝗆𝖺𝗇-𝖫𝗂𝗄𝖾 𝖢𝗈𝗇𝗏𝖾𝗋𝗌𝖺𝗍𝗂𝗈𝗇𝗌\n"
+        "➜ With Unlimited /Clone Features\n\n"
+        "➜ **𝖢𝗅𝗂𝖼𝗄 𝖳𝗁𝖾 𝖧𝖾𝗅𝗉 𝖡𝗎𝗍𝗍𝗈𝗇 𝖥𝗈𝗋 𝖬𝗈𝗋𝖾 𝖢𝗈𝗆𝗆𝖺𝗇𝖽𝗌** 💜"
     )
 
+    if update.message:
+        await update.message.reply_photo(photo=START_IMG, caption=text, reply_markup=InlineKeyboardMarkup(buttons), parse_mode="Markdown")
+    else:
+        await update.callback_query.message.edit_caption(caption=text, reply_markup=InlineKeyboardMarkup(buttons), parse_mode="Markdown")
 
 # =========================
-# HELP CALLBACK
+# 🛠 CLONE & CALLBACKS
 # =========================
-async def clone_help_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def close_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    await query.message.delete()
 
-    help_text = (
-        "✨ **Smart AI Help Menu**\n\n"
-        "🔹 `/chatbot on` — Group mein AI enable karein\n"
-        "🔹 `/chatbot off` — Group mein AI disable karein\n"
-        "🔹 `/welcome on` — Welcome message chalu karein\n"
-        "🔹 `/ping` — Bot ki current speed dekhein\n\n"
-        "💬 **Mujhse baat karne ke liye bas message bhejien!**"
-    )
-
-    await query.message.edit_caption(
-        caption=help_text,
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("⬅️ Back", callback_data="back_start")]
-        ]),
-        parse_mode="Markdown"
-    )
-
-# Back to Start Callback
-async def back_start_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    # Yahan original start handler call ho jayega
-    await clone_start_handler(update, context)
-
+async def clone_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args: return await update.message.reply_text("🚀 Usage: `/clone TOKEN`")
+    token = context.args[0]
+    user = update.effective_user
+    msg = await update.message.reply_text("⌛ **Booting your clone...**")
+    
+    try:
+        app = Application.builder().token(token).build()
+        register_all_handlers(app) 
+        await app.initialize(); await app.start()
+        me = await app.bot.get_me()
+        add_cloned_bot(user.id, token, me.username, me.id)
+        await msg.edit_text(f"✅ **Clone Ready!**\n\nBot: @{me.username}")
+    except Exception as e:
+        await msg.edit_text(f"❌ Error: `{e}`")
 
 # =========================
-# PING
+# ⚙️ REGISTRATION
 # =========================
-async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    start = time.time()
-    m = await update.message.reply_text("🏓 **Pinging...**", parse_mode="Markdown")
-    ms = int((time.time() - start) * 1000)
-    await m.edit_text(f"⚡ **Pong! Speed:** `{ms} ms`", parse_mode="Markdown")
 
-
-# =========================
-# REGISTER HANDLERS
-# =========================
-def register_basic_handlers(app: Application):
-    # Commands
+def register_all_handlers(app: Application):
     app.add_handler(CommandHandler("start", clone_start_handler))
+    app.add_handler(CommandHandler("clone", clone_bot))
     app.add_handler(CommandHandler("ping", ping_cmd))
-    app.add_handler(CommandHandler("chatbot", chatbot_toggle))
-    app.add_handler(CommandHandler("welcome", welcome_toggle))
-
-    # Callbacks
-    app.add_handler(CallbackQueryHandler(clone_help_cb, pattern="clone_help"))
-    app.add_handler(CallbackQueryHandler(back_start_cb, pattern="back_start"))
-
-    # Messages
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply))
+    app.add_handler(CommandHandler("ban", ban_user))
+    app.add_handler(CommandHandler("mute", mute_user))
+    
+    app.add_handler(CallbackQueryHandler(close_callback, pattern="close_msg"))
+    app.add_handler(CallbackQueryHandler(clone_start_handler, pattern="back_start"))
+    
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member))
-
-    # Anti-Media Handler (Group 1 for separate execution)
-    app.add_handler(MessageHandler(
-        (filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Sticker.ALL),
-        anti_nsfw_delete
-    ), group=1)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply))
