@@ -25,14 +25,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"I'ᴍ {bot.first_name}\n\n"
         "๏ 𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?\n"
         "➜ I'ᴍ A Sᴍᴀʀᴛ Aɪ Cʜᴀᴛ Aꜱꜱɪꜱᴛᴀɴᴛ\n"
-        "➜ Hᴜᴍᴀɴ-Lɪᴋᴇ Rᴇᴩʟʏ\n"
-        "➜ Mᴜʟᴛɪ Lᴀɴɢᴜᴀɢᴇ Sᴜᴩᴩᴏʀᴛ Nᴏ Aʙᴜꜱᴇ\n\n"
         "➜ 24x7 Fᴀꜱᴛ Rᴇꜱᴩᴏɴꜱᴇ\n"
         "────── ⋅ ⋅ ────── ⋅ ⋅ ⋅\n"
-        "๏ <b>𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘 𝗠𝗘 ?</b>\n"
-        "➜ Aᴅᴅ Mᴇ Bᴀʙʏ ʏᴏᴜʀ Gʀᴏᴜᴩ\n"
-        "➜ Uꜱᴇ /Chatbot On ᴛᴏ Eɴᴀʙʟᴇ\n"
-        "➜ Uꜱᴇ /Chatbot Off ᴛᴏ Dɪꜱᴀʙʟᴇ\n\n"
         "➜ Cʟɪᴄᴋ Tʜᴇ Hᴇʟᴩ Bᴜᴛᴛᴏɴ Fᴏʀ Mᴏʀᴇ Cᴏᴍᴍᴀɴᴅꜱ 🫶\n"
         "</blockquote>"
     )
@@ -59,7 +53,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.callback_query.message.reply_photo(photo=display_img, caption=text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(buttons))
 
 # =========================
-# HELP CALLBACK (IMPORTANT FIX)
+# HELP & PING HANDLERS
 # =========================
 async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -67,58 +61,47 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     help_text = (
         "✨ <b>Hᴇᴩ Bᴏᴏᴋ</b> ✨\n\n"
-        "👤 <b>User Commands:</b>\n"
+        "👤 <b>Commands:</b>\n"
         "• /start — Start bot\n"
-        "• /ping — Check speed\n\n"
-        "⚙️ <b>Group Settings:</b>\n"
-        "• /chatbot on — Enable AI\n"
-        "• /chatbot off — Disable AI\n"
+        "• /ping — Check speed\n"
+        "• /chatbot on/off — Enable AI\n"
     )
     back = [[InlineKeyboardButton("⬅️ Back", callback_data="start_back")]]
-    
-    if query:
-        await query.edit_message_caption(caption=help_text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(back))
-    else:
-        await update.message.reply_text(help_text, parse_mode="HTML")
+    await query.edit_message_caption(caption=help_text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(back))
 
-# =========================
-# PING COMMAND (FIXED)
-# =========================
 async def ping_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_time = time.time()
+    user = update.effective_user
     
-    # Callback check
     if update.callback_query:
-        query = update.callback_query
-        await query.answer("Checking Ping...")
-        msg = await query.message.reply_text("⚡")
+        await update.callback_query.answer("Checking...")
+        msg = await update.callback_query.message.reply_text("⚡")
     else:
         msg = await update.message.reply_text("⚡")
         
     ping_ms = round((time.time() - start_time) * 1000, 3)
-    bot = await context.bot.get_me()
+    text = f"<blockquote>нᴇу {user.first_name}!!\n➡ <code>{ping_ms} ms</code></blockquote>"
     
-    text = (
-        f"нᴇу !!\n"
-        f"╰─ <b>{bot.first_name}</b> 🍓 Is αℓινє 🥀 αη∂ ωᴏяᴋιηɢ\n"
-        f"➡ <code>{ping_ms} ms</code>\n\n"
-        f"мα∂є ву 💗 <a href='tg://user?id={OWNER_ID}'>𝐇𝐀𝐑𝐈</a> 🥀"
-    )
-    
-    buttons = [[InlineKeyboardButton("Cʟᴏꜱᴇ", callback_data="close_msg")]]
-    await msg.delete()
-    
-    # Ping mein bhi User DP dikhane ke liye
     user_photo = START_IMG
     try:
-        photos = await context.bot.get_user_profile_photos(update.effective_user.id)
+        photos = await context.bot.get_user_profile_photos(user.id)
         if photos.total_count > 0: user_photo = photos.photos[0][-1].file_id
     except: pass
 
+    await msg.delete()
+    await context.bot.send_photo(
+        chat_id=update.effective_chat.id,
+        photo=user_photo,
+        caption=text,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗑 Close", callback_data="close_ping")]])
+    )
+
+# MISSING HANDLER FIXED
+async def ping_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query:
-        await update.callback_query.message.reply_photo(photo=user_photo, caption=text, reply_markup=InlineKeyboardMarkup(buttons), parse_mode="HTML")
-    else:
-        await update.message.reply_photo(photo=user_photo, caption=text, reply_markup=InlineKeyboardMarkup(buttons), parse_mode="HTML")
+        await update.callback_query.answer()
+        await update.callback_query.message.delete()
 
 async def close_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query:
