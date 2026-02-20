@@ -5,32 +5,41 @@ from telegram.ext import (
     CommandHandler, 
     MessageHandler, 
     filters, 
-    ChatMemberHandler,
+    ChatMemberHandler, 
     CallbackQueryHandler,
     ContextTypes
 )
 
-# Configuration & Database logic
-from config import Config
-from database import register_user
-
-# Modules Import
-from modules.start import start, help_menu, help_button_callback
-from modules.ping import ping
-from modules.chatbot import chatbot_reply, chatbot_toggle
-from modules.admin import (
-    get_admin_list, 
-    ban_user, 
-    unban_user, 
-    mute_user, 
-    unmute_user, 
-    promote_user, 
-    get_user_id,
-    welcome_toggle
-)
-from modules.welcome import welcome_member
-from modules.logging import log_bot_on, log_group_add
-from modules.broadcast import broadcast_handler
+# Relative Imports Fix (Adding dots for Heroku/Package structure)
+try:
+    from .config import Config
+    from .database import register_user
+    from .modules.start import start, help_menu, help_button_callback
+    from .modules.ping import ping
+    from .modules.chatbot import chatbot_reply, chatbot_toggle
+    from .modules.admin import (
+        get_admin_list, ban_user, unban_user, 
+        mute_user, unmute_user, promote_user, 
+        get_user_id, welcome_toggle
+    )
+    from .modules.welcome import welcome_member
+    from .modules.logging import log_bot_on, log_group_add
+    from .modules.broadcast import broadcast_handler
+except ImportError:
+    # Local testing ke liye agar relative import fail ho
+    from config import Config
+    from database import register_user
+    from modules.start import start, help_menu, help_button_callback
+    from modules.ping import ping
+    from modules.chatbot import chatbot_reply, chatbot_toggle
+    from modules.admin import (
+        get_admin_list, ban_user, unban_user, 
+        mute_user, unmute_user, promote_user, 
+        get_user_id, welcome_toggle
+    )
+    from modules.welcome import welcome_member
+    from modules.logging import log_bot_on, log_group_add
+    from modules.broadcast import broadcast_handler
 
 # Logging Setup
 logging.basicConfig(
@@ -47,14 +56,14 @@ async def set_bot_commands(application):
         BotCommand("ping", "Bot ki speed check karein ⚡"),
         BotCommand("help", "Saari commands ki list dekhein 📖"),
         BotCommand("id", "Apni ya group ki ID jaanein 🆔"),
-        BotCommand("chatbot", "AI Chatbot ON/OFF karein (Admins) 🤖"),
+        BotCommand("chatbot", "AI Chatbot ON/OFF karein 🤖"),
         BotCommand("welcome", "Welcome message ON/OFF karein 🤝"),
-        BotCommand("admins", "Group ke admins ki list dekhein 👮"),
-        BotCommand("ban", "User ko ban karein (Reply) 🚫"),
+        BotCommand("admins", "Admins ki list dekhein 👮"),
+        BotCommand("ban", "User ko ban karein 🚫"),
         BotCommand("unban", "User ko unban karein 🔓"),
-        BotCommand("mute", "User ko mute karein (Reply) 🤫"),
+        BotCommand("mute", "User ko mute karein 🤫"),
         BotCommand("unmute", "User ko unmute karein 🔊"),
-        BotCommand("broadcast", "Sabhi users ko msg bhejin (Owner) 📢"),
+        BotCommand("broadcast", "Msg sabhi ko bhejin (Owner) 📢"),
     ]
     await application.bot.set_my_commands(commands)
 
@@ -62,11 +71,11 @@ async def set_bot_commands(application):
 # ✶ BOT STARTUP SIGNAL
 # ==========================================
 async def post_init(application):
-    """Bot deploy hote hi commands set karega aur notification bhejega"""
-    await set_bot_commands(application) # Commands list set karna
+    """Bot deploy hote hi commands set karega aur log bhejega"""
+    await set_bot_commands(application)
     try:
         await log_bot_on(application)
-        print("🚀 NATKHAT SYSTEM: ONLINE & COMMANDS SET")
+        print("🚀 NATKHAT SYSTEM: ONLINE")
     except Exception as e:
         print(f"Startup Log Error: {e}")
 
@@ -79,23 +88,21 @@ async def close_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.delete()
 
 # ==========================================
-# ✶ MAIN APPLICATION ENGINE
+# ✶ MAIN ENGINE
 # ==========================================
 def main():
     # Build Application
     application = ApplicationBuilder().token(Config.BOT_TOKEN).post_init(post_init).build()
 
-    # --- 1. HANDLERS ---
+    # Handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_menu))
     application.add_handler(CommandHandler("ping", ping))
     application.add_handler(CommandHandler("id", get_user_id))
     
-    # Callbacks
     application.add_handler(CallbackQueryHandler(help_button_callback, pattern="^(help_menu|back_start)$"))
     application.add_handler(CallbackQueryHandler(close_callback, pattern="close_msg"))
 
-    # Admin & Settings
     application.add_handler(CommandHandler("admins", get_admin_list))
     application.add_handler(CommandHandler("ban", ban_user))
     application.add_handler(CommandHandler("unban", unban_user))
@@ -104,14 +111,13 @@ def main():
     application.add_handler(CommandHandler("promote", promote_user))
     application.add_handler(CommandHandler("chatbot", chatbot_toggle))
     application.add_handler(CommandHandler("welcome", welcome_toggle))
-
-    # Owner & Events
     application.add_handler(CommandHandler("broadcast", broadcast_handler))
+
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply))
     application.add_handler(ChatMemberHandler(log_group_add, ChatMemberHandler.MY_CHAT_MEMBER))
 
-    # --- RUN ---
+    # Run Polling
     print("NATKHAT is Polling...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
