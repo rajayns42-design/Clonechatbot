@@ -23,7 +23,7 @@ from .database import add_user, get_all_users, get_welcome_status
 # MODULES
 # =========================
 from .modules.chatbot import chatbot_reply, chatbot_toggle
-from .modules.welcome import welcome_toggle, welcome_member, master_start, help_callback
+from .modules.welcome import welcome_toggle, welcome_member, start, help_callback
 from .modules.admin import ban_user, unban_user, mute_user, unmute_user, promote_user, get_admin_list
 from .modules.ping import ping_handler, ping_callback_handler
 
