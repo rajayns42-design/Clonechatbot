@@ -1,88 +1,119 @@
 import logging
-import sys
-import asyncio
-from telegram import BotCommand, Update
+from telegram import Update, BotCommand
 from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
+    ApplicationBuilder, 
+    CommandHandler, 
+    MessageHandler, 
+    filters, 
+    ChatMemberHandler,
     CallbackQueryHandler,
-    ContextTypes,
-    filters
+    ContextTypes
 )
 
-# Config & DB
-from .config import TOKEN, LOGGER_GROUP, OWNER_ID
-from .database import add_user, get_all_users
+# Configuration & Database logic
+from bot.config import Config
+from bot.database import register_user
 
-# Modules (Make sure these exist in start.py)
-from .modules.chatbot import chatbot_reply, chatbot_toggle
-from .modules.start import start, help_callback, ping_handler, ping_callback_handler, close_msg
+# Modules Import
+from bot.modules.start import start, help_menu, help_button_callback
+from bot.modules.ping import ping
+from bot.modules.chatbot import chatbot_reply, chatbot_toggle
+from bot.modules.admin import (
+    get_admin_list, 
+    ban_user, 
+    unban_user, 
+    mute_user, 
+    unmute_user, 
+    promote_user, 
+    get_user_id,
+    welcome_toggle
+)
+from bot.modules.welcome import welcome_member
+from bot.modules.logging import log_bot_on, log_group_add
+from bot.modules.broadcast import broadcast_handler
 
-logging.basicConfig(level=logging.INFO)
+# Logging Setup
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
-# =========================
-# NEW USER LOGGER (NOTIFY)
-# =========================
-async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.effective_user or not update.message:
-        return
-    
-    user = update.effective_user
-    # 1. Database mein add karna
-    add_user(user.id)
-    
-    # 2. Logger group notification (Sirf /start par)
-    if update.message.text and update.message.text.startswith("/start"):
-        log_text = (
-            f"<b>🔔 #NewUser_Started</b>\n\n"
-            f"👤 <b>Name:</b> {user.first_name}\n"
-            f"🆔 <b>ID:</b> <code>{user.id}</code>\n"
-            f"🔗 <b>Username:</b> @{user.username if user.username else 'None'}"
-        )
-        try:
-            await context.bot.send_message(chat_id=LOGGER_GROUP, text=log_text, parse_mode="HTML")
-        except: pass
+# ==========================================
+# ✶ SET BOT COMMANDS MENU
+# ==========================================
+async def set_bot_commands(application):
+    commands = [
+        BotCommand("start", "Bot ko chalu karein ✨"),
+        BotCommand("ping", "Bot ki speed check karein ⚡"),
+        BotCommand("help", "Saari commands ki list dekhein 📖"),
+        BotCommand("id", "Apni ya group ki ID jaanein 🆔"),
+        BotCommand("chatbot", "AI Chatbot ON/OFF karein (Admins) 🤖"),
+        BotCommand("welcome", "Welcome message ON/OFF karein 🤝"),
+        BotCommand("admins", "Group ke admins ki list dekhein 👮"),
+        BotCommand("ban", "User ko ban karein (Reply) 🚫"),
+        BotCommand("unban", "User ko unban karein 🔓"),
+        BotCommand("mute", "User ko mute karein (Reply) 🤫"),
+        BotCommand("unmute", "User ko unmute karein 🔊"),
+        BotCommand("broadcast", "Sabhi users ko msg bhejin (Owner) 📢"),
+    ]
+    await application.bot.set_my_commands(commands)
 
-# =========================
-# REGISTER ALL HANDLERS
-# =========================
-def register_all_handlers(app: Application):
-    # Logger first (Group -1)
-    app.add_handler(MessageHandler(filters.COMMAND & filters.Regex(r"^/start"), log_user_start), group=-1)
+# ==========================================
+# ✶ BOT STARTUP SIGNAL
+# ==========================================
+async def post_init(application):
+    """Bot deploy hote hi commands set karega aur notification bhejega"""
+    await set_bot_commands(application) # Commands list set karna
+    try:
+        await log_bot_on(application)
+        print("🚀 NATKHAT SYSTEM: ONLINE & COMMANDS SET")
+    except Exception as e:
+        print(f"Startup Log Error: {e}")
 
-    # Main Commands (Ye commands ab reply dengi)
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("ping", ping_handler))
-    app.add_handler(CommandHandler("help", help_callback))
-    app.add_handler(CommandHandler("chatbot", chatbot_toggle))
+# ==========================================
+# ✶ HELPER: CLOSE CALLBACK
+# ==========================================
+async def close_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.message.delete()
 
-    # Callback Query (Buttons ke liye)
-    app.add_handler(CallbackQueryHandler(start, pattern="^start_back$"))
-    app.add_handler(CallbackQueryHandler(help_callback, pattern="^help_menu$"))
-    app.add_handler(CallbackQueryHandler(ping_handler, pattern="^ping_btn$"))
-    app.add_handler(CallbackQueryHandler(ping_callback_handler, pattern="^close_ping$"))
-    app.add_handler(CallbackQueryHandler(close_msg, pattern="^close_msg$"))
-
-    # Chatbot Reply (Always at the end)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply))
-
-async def post_init(app: Application):
-    # Menu button mein commands dikhane ke liye
-    await app.bot.set_my_commands([
-        BotCommand("start", "Natkhat ko shuru karein"),
-        BotCommand("ping", "Bot speed check"),
-        BotCommand("help", "Command list"),
-    ])
-    try: await app.bot.send_message(LOGGER_GROUP, "🟢 <b>Natkhat is now Online!</b>", parse_mode="HTML")
-    except: pass
-
+# ==========================================
+# ✶ MAIN APPLICATION ENGINE
+# ==========================================
 def main():
-    if not TOKEN: sys.exit("❌ TOKEN MISSING")
-    app = Application.builder().token(TOKEN).post_init(post_init).build()
-    register_all_handlers(app)
-    print("⚡ NATKHAT BOT IS LIVE ⚡")
-    app.run_polling(drop_pending_updates=True)
+    # Build Application
+    application = ApplicationBuilder().token(Config.BOT_TOKEN).post_init(post_init).build()
+
+    # --- 1. HANDLERS ---
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_menu))
+    application.add_handler(CommandHandler("ping", ping))
+    application.add_handler(CommandHandler("id", get_user_id))
+    
+    # Callbacks
+    application.add_handler(CallbackQueryHandler(help_button_callback, pattern="^(help_menu|back_start)$"))
+    application.add_handler(CallbackQueryHandler(close_callback, pattern="close_msg"))
+
+    # Admin & Settings
+    application.add_handler(CommandHandler("admins", get_admin_list))
+    application.add_handler(CommandHandler("ban", ban_user))
+    application.add_handler(CommandHandler("unban", unban_user))
+    application.add_handler(CommandHandler("mute", mute_user))
+    application.add_handler(CommandHandler("unmute", unmute_user))
+    application.add_handler(CommandHandler("promote", promote_user))
+    application.add_handler(CommandHandler("chatbot", chatbot_toggle))
+    application.add_handler(CommandHandler("welcome", welcome_toggle))
+
+    # Owner & Events
+    application.add_handler(CommandHandler("broadcast", broadcast_handler))
+    application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply))
+    application.add_handler(ChatMemberHandler(log_group_add, ChatMemberHandler.MY_CHAT_MEMBER))
+
+    # --- RUN ---
+    print("NATKHAT is Polling...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
     main()
