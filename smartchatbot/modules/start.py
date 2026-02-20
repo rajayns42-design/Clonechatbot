@@ -1,9 +1,9 @@
 import time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import ContextTypes
-from bot.config import Config
-from bot.database import register_user
-from bot.modules.logging import log_user_start
+from .config import Config
+from .database import register_user
+from .modules.logging import log_user_start
 
 # Bot start time record
 BOT_START_TIME = time.time()
