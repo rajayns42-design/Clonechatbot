@@ -20,10 +20,11 @@ from .config import TOKEN, LOGGER_GROUP, OWNER_ID, START_IMG, SUPPORT_GROUP, UPD
 from .database import add_user, get_all_users, get_welcome_status
 
 # =========================
-# MODULES
+# MODULES (FIXED IMPORTS)
 # =========================
 from .modules.chatbot import chatbot_reply, chatbot_toggle
-from .modules.welcome import welcome_toggle, welcome_member, start, help_callback
+from .modules.welcome import welcome_toggle, welcome_member
+from .modules.start import start, help_callback  # <-- start.py se sahi functions load kiye
 from .modules.admin import ban_user, unban_user, mute_user, unmute_user, promote_user, get_admin_list
 from .modules.ping import ping_handler, ping_callback_handler
 
@@ -75,18 +76,18 @@ async def safe_chatbot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"CHATBOT ERROR: {e}")
 
 # =========================
-# REGISTER HANDLERS
+# REGISTER HANDLERS (FIXED)
 # =========================
 def register_all_handlers(app: Application):
     # Commands
-    app.add_handler(CommandHandler("start", master_start))
+    app.add_handler(CommandHandler("start", start)) # <-- master_start ko badal kar start kiya
     app.add_handler(CommandHandler("help", help_callback))
     app.add_handler(CommandHandler("ping", ping_handler))
     app.add_handler(CommandHandler("broadcast", broadcast_handler))
     app.add_handler(CommandHandler("chatbot", chatbot_toggle))
     app.add_handler(CommandHandler("welcome", welcome_toggle))
 
-    # Admin
+    # Admin commands
     app.add_handler(CommandHandler("ban", ban_user))
     app.add_handler(CommandHandler("unban", unban_user))
     app.add_handler(CommandHandler("mute", mute_user))
@@ -94,8 +95,8 @@ def register_all_handlers(app: Application):
     app.add_handler(CommandHandler("promote", promote_user))
     app.add_handler(CommandHandler("adminlist", get_admin_list))
 
-    # Callbacks
-    app.add_handler(CallbackQueryHandler(master_start, pattern="^start"))
+    # Callbacks (Fixed master_start issue)
+    app.add_handler(CallbackQueryHandler(start, pattern="^start"))
     app.add_handler(CallbackQueryHandler(help_callback, pattern="^help"))
     app.add_handler(CallbackQueryHandler(ping_callback_handler, pattern="^close_ping"))
 
