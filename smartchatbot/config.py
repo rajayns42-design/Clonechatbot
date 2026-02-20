@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 
-# .env file load karne ke liye
 load_dotenv()
 
 class Config:
@@ -36,10 +35,7 @@ class Config:
     # =========================
     # VISUALS & LINKS
     # =========================
-    START_IMG = os.environ.get(
-        "START_IMG",
-        "https://graph.org/file/your-default-image.jpg"
-    )
+    START_IMG = os.environ.get("START_IMG", "https://graph.org/file/your-default-image.jpg")
     SUPPORT_GROUP = os.environ.get("SUPPORT_GROUP", "https://t.me/Love_Ki_Duniyaa")
     UPDATE_CHANNEL = os.environ.get("UPDATE_CHANNEL", "https://t.me/Love_Bot_143")
 
@@ -48,9 +44,21 @@ class Config:
     # =========================
     LOGGER_GROUP = int(os.environ.get("LOGGER_GROUP", "-1003605595874"))
 
-# --- YEH LINES ZAROORI HAIN ---
-# Taaki baaki files 'from config import LOGGER_GROUP' karke access kar sakein
-LOGGER_GROUP = Config.LOGGER_GROUP
+# ==========================================
+# IMPORTANT: DO NOT REMOVE THIS PART
+# Ye lines aapke 'ImportError' ko fix karengi
+# ==========================================
 BOT_TOKEN = Config.BOT_TOKEN
 OWNER_ID = Config.OWNER_ID
-# ------------------------------
+OWNER_USERNAME = Config.OWNER_USERNAME
+API_ID = Config.API_ID
+API_HASH = Config.API_HASH
+MONGO_URL = Config.MONGO_URL
+GEMINI_API_KEY = Config.GEMINI_API_KEY
+MISTRAL_API_KEY = Config.MISTRAL_API_KEY
+GROQ_API_KEY = Config.GROQ_API_KEY
+START_IMG = Config.START_IMG
+SUPPORT_GROUP = Config.SUPPORT_GROUP
+UPDATE_CHANNEL = Config.UPDATE_CHANNEL
+LOGGER_GROUP = Config.LOGGER_GROUP
+# ==========================================
