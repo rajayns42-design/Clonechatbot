@@ -11,11 +11,7 @@ from telegram.ext import (
     ContextTypes
 )
 
-# ==========================================
-# ✶ FIXED ABSOLUTE IMPORTS
-# ==========================================
-# Heroku par jab hum '-m smartchatbot' chalate hain, 
-# toh humein package name ke saath import karna padta hai.
+# FIXED ABSOLUTE IMPORTS
 from smartchatbot.config import Config
 from smartchatbot.database import register_user
 from smartchatbot.modules.start import start, help_menu, help_button_callback
@@ -73,15 +69,19 @@ def main():
 
     application = ApplicationBuilder().token(Config.BOT_TOKEN).post_init(post_init).build()
 
-    # Handlers
+    # --- COMMAND HANDLERS ---
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_menu))
     application.add_handler(CommandHandler("ping", ping))
     application.add_handler(CommandHandler("id", get_user_id))
     
-    application.add_handler(CallbackQueryHandler(help_button_callback, pattern="^(help_menu|back_start)$"))
-    application.add_handler(CallbackQueryHandler(close_callback, pattern="close_msg"))
+    # --- CALLBACK HANDLERS (Order is important) ---
+    # Sabse pehle delete button ka pattern match karo
+    application.add_handler(CallbackQueryHandler(close_callback, pattern="^close_msg$"))
+    # Baki saare buttons (Help/Back) ke liye universal handler
+    application.add_handler(CallbackQueryHandler(help_button_callback))
 
+    # --- ADMIN & GROUP HANDLERS ---
     application.add_handler(CommandHandler("admins", get_admin_list))
     application.add_handler(CommandHandler("ban", ban_user))
     application.add_handler(CommandHandler("unban", unban_user))
@@ -92,6 +92,7 @@ def main():
     application.add_handler(CommandHandler("welcome", welcome_toggle))
     application.add_handler(CommandHandler("broadcast", broadcast_handler))
 
+    # --- MESSAGE & STATUS HANDLERS ---
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply))
     application.add_handler(ChatMemberHandler(log_group_add, ChatMemberHandler.MY_CHAT_MEMBER))
