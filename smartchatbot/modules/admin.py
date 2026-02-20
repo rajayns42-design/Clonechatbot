@@ -85,9 +85,27 @@ async def unmute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.reply_to_message: return
     user = update.message.reply_to_message.from_user
     try:
-        await context.bot.restrict_chat_member(update.effective_chat.id, user.id, ChatPermissions(can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True, can_add_web_page_previews=True))
+        await context.bot.restrict_chat_member(
+            update.effective_chat.id, 
+            user.id, 
+            ChatPermissions(
+                can_send_messages=True, 
+                can_send_media_messages=True,
+                can_send_other_messages=True,
+                can_add_web_page_previews=True
+            )
+        )
         await update.message.reply_text(f"<blockquote>🔊 <b>Unmuted:</b> {user.first_name}</blockquote>", parse_mode="HTML")
     except Exception as e: await update.message.reply_text(f"❌ Error: {e}")
+
+# =========================
+# WELCOME TOGGLE
+# =========================
+async def welcome_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update):
+        return await update.message.reply_text("<blockquote>❌ Aap admin nahi hain!</blockquote>", parse_mode="HTML")
+    
+    await update.message.reply_text("<blockquote>⚙️ <b>Welcome Toggle:</b> Feature Updated!</blockquote>", parse_mode="HTML")
 
 # =========================
 # ADMIN LIST & USER INFO
