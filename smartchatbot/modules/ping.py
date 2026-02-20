@@ -3,9 +3,14 @@ import random
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from ..config import Config
 
-# Bot startup time (Isse main file mein define karein ya import karein)
+# ==========================================
+# ✶ FIXED ABSOLUTE IMPORT (Heroku Fix)
+# ==========================================
+from smartchatbot.config import Config
+
+# Bot startup time (Yeh variable main file se link hona chahiye, 
+# par yahan hum ek fallback define kar rahe hain)
 start_time = datetime.now()
 
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -22,7 +27,6 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # 2. Uptime Calculation
     uptime_delta = datetime.now() - start_time
-    # Days, Hours, Minutes, Seconds format
     uptime_str = str(uptime_delta).split(".")[0] 
 
     # 3. User & Bot Info
@@ -30,7 +34,7 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bot = await context.bot.get_me()
     
     # --- USER PROFILE PHOTO LOGIC ---
-    user_photo = Config.START_IMG # Default agar DP na ho
+    user_photo = Config.START_IMG 
     try:
         photos = await context.bot.get_user_profile_photos(user.id)
         if photos.total_count > 0:
@@ -38,11 +42,11 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         pass
 
-    # 4. Professional Blockquote Aesthetic Response
+    # 4. Professional Blockquote Response
     text = (
         f"<blockquote>\n"
         f"ʜᴇʏ <a href='tg://user?id={user.id}'>{user.first_name}</a> !!\n"
-        f"╰─ <b>{bot.first_name}</b> 🍓 Is αℓινє 🥀\n\n"
+        f"╰─ <b>{bot.first_name}</b> 💞 Is αℓινє 🥀\n\n"
         f"➡ 𝐒𝐩𝐞𝐞𝐝: <code>{latency:.2f} ms</code>\n"
         f"➡ 𝐔𝐩𝐭𝐢𝐦𝐞: <code>{uptime_str}</code>\n\n"
         f"мα∂ᴇ ву 💗 <a href='tg://user?id={Config.OWNER_ID}'>𝐇𝐀𝐑𝐈</a> 🥀\n"
@@ -51,7 +55,7 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     buttons = [[InlineKeyboardButton("🗑️ Cʟᴏꜱᴇ", callback_data="close_msg")]]
 
-    # 5. Result: Purana msg delete karke photo wala result bhejna
+    # 5. Final Result
     try:
         await message.delete()
         await update.message.reply_photo(
@@ -61,5 +65,4 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="HTML"
         )
     except Exception as e:
-        # Agar photo fail ho jaye toh sirf text bhej do
         await update.message.reply_text(text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(buttons))
