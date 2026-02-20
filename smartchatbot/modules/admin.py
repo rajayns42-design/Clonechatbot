@@ -47,7 +47,7 @@ async def get_admin_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await status_msg.edit_text(f"❌ Error: {e}")
 
 # =========================
-# BAN / MUTE Logic (Blockquote Style)
+# BAN / UNBAN Logic
 # =========================
 async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
@@ -62,6 +62,21 @@ async def ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}")
 
+async def unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update): return
+    if not update.message.reply_to_message:
+        return await update.message.reply_text("<blockquote>❌ Reply to someone to unban!</blockquote>", parse_mode="HTML")
+    
+    user = update.message.reply_to_message.from_user
+    try:
+        await context.bot.unban_chat_member(update.effective_chat.id, user.id)
+        await update.message.reply_text(f"<blockquote>🔓 <b>Unbanned:</b> {user.first_name} [<code>{user.id}</code>]</blockquote>", parse_mode="HTML")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error: {e}")
+
+# =========================
+# MUTE / UNMUTE Logic
+# =========================
 async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update): return
     if not update.message.reply_to_message:
@@ -74,14 +89,32 @@ async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}")
 
+async def unmute_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update): return
+    if not update.message.reply_to_message:
+        return await update.message.reply_text("<blockquote>❌ Reply to someone to unmute!</blockquote>", parse_mode="HTML")
+    
+    user = update.message.reply_to_message.from_user
+    try:
+        await context.bot.restrict_chat_member(
+            update.effective_chat.id, 
+            user.id, 
+            ChatPermissions(
+                can_send_messages=True, 
+                can_send_media_messages=True,
+                can_send_other_messages=True,
+                can_add_web_page_previews=True
+            )
+        )
+        await update.message.reply_text(f"<blockquote>🔊 <b>Unmuted:</b> {user.first_name} [<code>{user.id}</code>]</blockquote>", parse_mode="HTML")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error: {e}")
+
 # =========================
 # USER INFO / ID COMMAND
 # =========================
 async def get_user_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     requester = update.effective_user
-    chat = update.effective_chat
-
-    # Target logic
     if update.message.reply_to_message:
         user = update.message.reply_to_message.from_user
     else:
@@ -98,9 +131,4 @@ async def get_user_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     buttons = [[InlineKeyboardButton("📷 Profile Photo", url=f"https://t.me/i/user/{user.id}")]]
-
-    await update.message.reply_text(
-        text=text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
+    await update.message.reply_text(text=text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(buttons))
