@@ -25,12 +25,6 @@ from .modules.welcome import (
     master_start,
     help_callback
 )
-from .modules.cloner import (
-    clone_bot,
-    delclone_bot,
-    anti_nsfw_delete,
-    broadcast_handler
-)
 from .modules.admin import (
     ban_user,
     unban_user,
