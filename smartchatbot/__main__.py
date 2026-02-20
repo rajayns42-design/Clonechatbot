@@ -19,19 +19,32 @@ from .config import TOKEN, LOGGER_GROUP
 from .database import get_all_bots, add_user
 
 from .modules.chatbot import chatbot_reply, chatbot_toggle
-from .modules.welcome import welcome_toggle, welcome_member, master_start, help_callback
-from .modules.cloner import clone_bot, delclone_bot, anti_nsfw_delete, broadcast_handler
+from .modules.welcome import (
+    welcome_toggle,
+    welcome_member,
+    master_start,
+    help_callback
+)
+from .modules.cloner import (
+    clone_bot,
+    delclone_bot,
+    anti_nsfw_delete,
+    broadcast_handler
+)
 from .modules.admin import (
-    ban_user, unban_user, mute_user, unmute_user,
-    promote_user, get_admin_list
+    ban_user,
+    unban_user,
+    mute_user,
+    unmute_user,
+    promote_user,
+    get_admin_list
 )
 from .modules.ping import ping_handler, ping_callback_handler
-
 
 logging.basicConfig(level=logging.INFO)
 
 # =========================
-# SAFE LOGGER
+# LOGGER
 # =========================
 
 async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -61,7 +74,7 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # =========================
-# HANDLER REGISTER
+# REGISTER HANDLERS
 # =========================
 
 def register_all_handlers(app: Application):
@@ -90,13 +103,12 @@ def register_all_handlers(app: Application):
     app.add_handler(CallbackQueryHandler(help_callback, pattern="^help"))
     app.add_handler(CallbackQueryHandler(ping_callback_handler, pattern="^close_ping"))
 
-    # -------- LOGGER (non blocking) --------
+    # ✅ LOGGER (FIX — no block=False)
     app.add_handler(
-        MessageHandler(filters.ALL, log_user_start),
-        block=False
+        MessageHandler(filters.ALL, log_user_start)
     )
 
-    # -------- NSFW --------
+    # -------- NSFW FILTER --------
     app.add_handler(
         MessageHandler(
             filters.PHOTO | filters.VIDEO | filters.ANIMATION | filters.Sticker.ALL,
@@ -109,7 +121,7 @@ def register_all_handlers(app: Application):
         MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, welcome_member)
     )
 
-    # -------- CHATBOT SAFE WRAPPER --------
+    # -------- CHATBOT SAFE --------
     async def safe_chatbot(update, context):
         try:
             await chatbot_reply(update, context)
