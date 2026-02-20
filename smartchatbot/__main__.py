@@ -12,39 +12,23 @@ from telegram.ext import (
 )
 
 # ==========================================
-# ✶ FIXING IMPORTS FOR HEROKU
+# ✶ ABSOLUTE IMPORTS (Final Fix for Heroku)
 # ==========================================
-# Hum seedha 'smartchatbot' package se import karenge 
-# taki folder structure ka koi issue na rahe.
-try:
-    from smartchatbot.config import Config
-    from smartchatbot.database import register_user
-    from smartchatbot.modules.start import start, help_menu, help_button_callback
-    from smartchatbot.modules.ping import ping
-    from smartchatbot.modules.chatbot import chatbot_reply, chatbot_toggle
-    from smartchatbot.modules.admin import (
-        get_admin_list, ban_user, unban_user, 
-        mute_user, unmute_user, promote_user, 
-        get_user_id, welcome_toggle
-    )
-    from smartchatbot.modules.welcome import welcome_member
-    from smartchatbot.modules.logging import log_bot_on, log_group_add
-    from smartchatbot.modules.broadcast import broadcast_handler
-except ImportError:
-    # Agar aap folder ke andar se test kar rahe hain (Local Testing)
-    from config import Config
-    from database import register_user
-    from modules.start import start, help_menu, help_button_callback
-    from modules.ping import ping
-    from modules.chatbot import chatbot_reply, chatbot_toggle
-    from modules.admin import (
-        get_admin_list, ban_user, unban_user, 
-        mute_user, unmute_user, promote_user, 
-        get_user_id, welcome_toggle
-    )
-    from modules.welcome import welcome_member
-    from modules.logging import log_bot_on, log_group_add
-    from modules.broadcast import broadcast_handler
+# Hum 'smartchatbot' package name use kar rahe hain taaki 
+# Heroku ko file location mil sake.
+from smartchatbot.config import Config
+from smartchatbot.database import register_user
+from smartchatbot.modules.start import start, help_menu, help_button_callback
+from smartchatbot.modules.ping import ping
+from smartchatbot.modules.chatbot import chatbot_reply, chatbot_toggle
+from smartchatbot.modules.admin import (
+    get_admin_list, ban_user, unban_user, 
+    mute_user, unmute_user, promote_user, 
+    get_user_id, welcome_toggle
+)
+from smartchatbot.modules.welcome import welcome_member
+from smartchatbot.modules.logging import log_bot_on, log_group_add
+from smartchatbot.modules.broadcast import broadcast_handler
 
 # Logging Setup
 logging.basicConfig(
@@ -84,12 +68,12 @@ async def close_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     if not Config.BOT_TOKEN:
-        print("❌ ERROR: BOT_TOKEN is missing in Config!")
+        print("❌ ERROR: BOT_TOKEN is missing!")
         return
 
     application = ApplicationBuilder().token(Config.BOT_TOKEN).post_init(post_init).build()
 
-    # Handlers setup
+    # Handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_menu))
     application.add_handler(CommandHandler("ping", ping))
