@@ -11,14 +11,14 @@ from telegram.ext import (
 )
 
 # Configuration & Database logic
-from bot.config import Config
-from bot.database import register_user
+from config import Config
+from database import register_user
 
 # Modules Import
-from bot.modules.start import start, help_menu, help_button_callback
-from bot.modules.ping import ping
-from bot.modules.chatbot import chatbot_reply, chatbot_toggle
-from bot.modules.admin import (
+from modules.start import start, help_menu, help_button_callback
+from modules.ping import ping
+from modules.chatbot import chatbot_reply, chatbot_toggle
+from modules.admin import (
     get_admin_list, 
     ban_user, 
     unban_user, 
@@ -28,9 +28,9 @@ from bot.modules.admin import (
     get_user_id,
     welcome_toggle
 )
-from bot.modules.welcome import welcome_member
-from bot.modules.logging import log_bot_on, log_group_add
-from bot.modules.broadcast import broadcast_handler
+from modules.welcome import welcome_member
+from modules.logging import log_bot_on, log_group_add
+from modules.broadcast import broadcast_handler
 
 # Logging Setup
 logging.basicConfig(
