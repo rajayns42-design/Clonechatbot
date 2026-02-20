@@ -1,59 +1,40 @@
 import asyncio
 from telegram import Update
 from telegram.ext import ContextTypes
+from ..config import OWNER_ID
+from ..database import get_all_users # Maan ke chalte hain ye function sabhi user IDs deta hai
 
-from smartchatbot.config import OWNER_ID
-from smartchatbot.database import users_collection
-
-# =========================
-# GET ALL USERS FROM DB
-# =========================
-async def get_all_users():
-    users = []
-    # Async cursor for MongoDB
-    async for u in users_collection.find({}, {"user_id": 1}):
-        if "user_id" in u:
-            users.append(u["user_id"])
-    return users
-
-# =========================
-# OWNER-ONLY GLOBAL BROADCAST
-# =========================
 async def broadcast_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    # ✅ Only Main Owner allowed
+    # Sirf Owner broadcast kar sakta hai
     if update.effective_user.id != int(OWNER_ID):
-        return
+        return await update.message.reply_text("❌ <b>Sirf Owner hi broadcast kar sakta hai!</b>", parse_mode="HTML")
 
-    # ✅ Check if message is a reply
     if not update.message.reply_to_message:
-        return await update.message.reply_text(
-            "❌ Reply karke /broadcast use karo"
-        )
+        return await update.message.reply_text("📢 <b>Kissi message ko reply karein jise broadcast karna hai!</b>", parse_mode="HTML")
 
-    status_msg = await update.message.reply_text("🚀 Broadcast starting...")
-
-    # Fetch all users from DB
-    targets = await get_all_users()
-
-    success = 0
+    msg = await update.message.reply_text("🚀 <b>Broadcast shuru ho raha hai...</b>", parse_mode="HTML")
+    
+    users = get_all_users() # Database se list
+    done = 0
     failed = 0
-
-    for chat_id in targets:
+    
+    for user_id in users:
         try:
+            # Reply wala message copy karke bhejega
             await context.bot.copy_message(
-                chat_id=chat_id,
+                chat_id=user_id,
                 from_chat_id=update.effective_chat.id,
                 message_id=update.message.reply_to_message.message_id
             )
-            success += 1
-            await asyncio.sleep(0.3)  # Rate-limit safety
-        except Exception:
+            done += 1
+            await asyncio.sleep(0.1) # Flood wait se bachne ke liye
+        except:
             failed += 1
-            continue
-
-    await status_msg.edit_text(
-        f"✅ Broadcast Done\n\n"
-        f"📤 Sent: {success}\n"
-        f"❌ Failed: {failed}"
-)
+            
+    await msg.edit_text(
+        f"✅ <b>Broadcast Complete!</b>\n\n"
+        f"👤 <b>Total Users:</b> <code>{len(users)}</code>\n"
+        f"✔️ <b>Success:</b> <code>{done}</code>\n"
+        f"❌ <b>Failed:</b> <code>{failed}</code>",
+        parse_mode="HTML"
+    )
