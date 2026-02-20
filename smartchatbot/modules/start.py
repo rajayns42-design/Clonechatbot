@@ -7,7 +7,7 @@ from telegram.ext import ContextTypes
 # ==========================================
 from smartchatbot.config import Config
 from smartchatbot.database import register_user
-from smartchatbot.modules.logging import log_user_start
+from smartchatbot.modules.logger import log_user_start
 
 # Bot start time record
 BOT_START_TIME = time.time()
