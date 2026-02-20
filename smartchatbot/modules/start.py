@@ -1,9 +1,13 @@
 import time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import ContextTypes
-from .config import Config
-from .database import register_user
-from .modules.logging import log_user_start
+
+# ==========================================
+# ✶ FIXED ABSOLUTE IMPORTS (Heroku Fix)
+# ==========================================
+from smartchatbot.config import Config
+from smartchatbot.database import register_user
+from smartchatbot.modules.logging import log_user_start
 
 # Bot start time record
 BOT_START_TIME = time.time()
@@ -16,8 +20,8 @@ def start_buttons(bot_username):
             InlineKeyboardButton("⌯ Hᴀʀɪ ⌯", url=f"https://t.me/{Config.OWNER_USERNAME.replace('@','')}")
         ],
         [
-            InlineKeyboardButton("📨 Uᴩᴅᴀᴛᴇ", url=Config.UPDATES_CHANNEL),
-            InlineKeyboardButton("📨 Sᴜᴩᴩᴏʀᴛ", url=Config.SUPPORT_CHAT)
+            InlineKeyboardButton("📨 Uᴩᴅᴀᴛᴇ", url=Config.UPDATE_CHANNEL),
+            InlineKeyboardButton("📨 Sᴜᴩᴩᴏʀᴛ", url=Config.SUPPORT_GROUP)
         ]
     ])
 
@@ -26,34 +30,39 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bot = await context.bot.get_me()
     
     # Database me user save karna
-    await register_user(user.id, user.first_name, user.username)
+    register_user(user.id, user.first_name, user.username)
     
-    # Logger group me photo ke sath log bhejna
+    # Logger group me log bhejna
     await log_user_start(update, context)
 
-    # --- PROFILE PHOTO FETCH LOGIC ---
-    # Default photo agar user ki DP na miley
+    # Profile photo logic
     chat_photo = Config.START_IMG 
     try:
         photos = await context.bot.get_user_profile_photos(user.id)
         if photos.total_count > 0:
-            # Sabse latest aur badi size wali photo
             chat_photo = photos.photos[0][-1].file_id
     except Exception as e:
         print(f"Error fetching profile photo: {e}")
 
+    # --- AAPKA NAYA BLOCKQUOTE TEXT ---
     START_TEXT = (
         f"<blockquote>\n"
         f"𝖧𝖾𝗒 <a href='tg://user?id={user.id}'>{user.first_name}</a> ✨\n"
         f"I'ᴍ <b>{bot.first_name}</b>\n\n"
         "๏ 𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?\n"
         "➜ I'ᴍ A Sᴍᴀʀᴛ Aɪ Cʜᴀᴛ Aꜱꜱɪꜱᴛᴀɴᴛ\n"
-        "➜ Uꜱᴇ /Chatbot Oɴ ᴛᴏ Eɴᴀʙʟᴇ\n\n"
-        "➜ Cʟɪᴄᴋ Tʜᴇ Hᴇʟᴩ Bᴜᴛᴛᴏɴ Fᴏʀ Mᴏʀᴇ! 🫶\n"
+        "➜ Hᴜᴍᴀɴ-Lɪᴋᴇ Rᴇᴩʟʏ\n"
+        "➜ Mᴜʟᴛɪ Lᴀɴɢᴜᴀɢᴇ Sᴜᴩᴩᴏʀᴛ Nᴏ Aʙᴜꜱᴇ\n\n"
+        "➜ 24x7 Fᴀꜱᴛ Rᴇꜱᴩᴏɴꜱᴇ\n"
+        "────── ⋅ ⋅ ────── ⋅ ⋅ ⋅\n"
+        "๏ 𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘 𝗠𝗘 ?\n"
+        "➜ Aᴅᴅ Mᴇ Bᴀʙʏ ʏᴏᴜʀ Gʀᴏᴜᴩ\n"
+        "➜ Uꜱᴇ /Chatbot Oɴ ᴛᴏ Eɴᴀʙʟᴇ\n"
+        "➜ Uꜱᴇ /Chatbot Oꜰꜰ ᴛᴏ Dɪꜱᴀʙʟᴇ\n\n"
+        "➜ Cʟɪᴄᴋ Tʜᴇ Hᴇʟᴩ Bᴜᴛᴛᴏɴ Fᴏʀ Mᴏʀᴇ Cᴏᴍᴍᴀɴᴅꜱ 🫶\n"
         f"</blockquote>"
     )
 
-    # Agar buttons ke callback (Back) se aaya hai
     if update.callback_query:
         try:
             await update.callback_query.message.edit_media(
@@ -61,14 +70,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=start_buttons(bot.username)
             )
         except:
-            # Agar edit nahi ho pa raha (photo type change), toh naya bhej do
             await update.callback_query.message.reply_photo(
                 photo=chat_photo,
                 caption=START_TEXT,
                 reply_markup=start_buttons(bot.username),
                 parse_mode="HTML"
             )
-    # Naya /start command
     else:
         await update.message.reply_photo(
             photo=chat_photo,
@@ -78,7 +85,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 # =========================================
-# ✶ HELP MENU
+# ✶ HELP MENU & CALLBACKS
 # =========================================
 async def help_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -97,16 +104,12 @@ async def help_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     back = [[InlineKeyboardButton("⬅️ Bᴀᴄᴋ", callback_data="back_start")]]
-
     await query.edit_message_caption(
         caption=help_text,
         reply_markup=InlineKeyboardMarkup(back),
         parse_mode="HTML"
     )
 
-# =========================================
-# ✶ CALLBACK HANDLER
-# =========================================
 async def help_button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if query.data == "back_start":
