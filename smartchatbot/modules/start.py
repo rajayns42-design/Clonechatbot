@@ -28,14 +28,24 @@ async def master_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         display_img = START_IMG
 
     # ---------- TEXT ----------
-    text = (
-        f"𝖧𝖾𝗒 [{user.first_name}](tg://user?id={user.id})\n"
-        f"𝖨'𝗆 {bot_name}\n\n"
-        "๏ 𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?\n"
-        "➜ 𝖨 𝖢𝖺𝗇 𝖢𝗋𝖾𝖺𝗍𝖾 𝖴𝗇𝗅𝗂𝗆𝗂𝗍𝖾𝖽 𝖠𝖨 𝖢𝗅𝗈𝗇𝖾𝗌\n"
-        "➜ 𝖧𝗎𝗆𝖺𝗇-𝖫𝗂𝗄𝖾 𝖢𝗈𝗇𝗏𝖾𝗋𝗌𝖺𝗍𝗂𝗈𝗇𝗌\n"
-        "➜ 𝖬𝗎𝗅𝗍𝗂 𝖫𝖺𝗇𝗀𝗎𝖺𝗀𝖾 𝖲𝗎𝗉𝗉𝗈𝗋𝗍\n\n"
-        "➜ 𝖢𝗅𝗂𝖼𝗄 𝖳𝗁𝖾 𝖧𝖾𝗅𝗉 𝖡𝗎𝗍𝗍𝗈𝗇 𝖥𝗈𝗋 𝖬𝗈𝗋𝖾 𝖢𝗈𝗆𝗆𝖺𝗇𝖽𝗌 💜"
+        text = f"""<blockquote>
+𝖧𝖾𝗒 [{user.first_name}](tg://user?id={user.id})
+I'ᴍ {bot_name}
+
+๏ 𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?
+➜ Wɪᴛʜ Aɪ /Cʟᴏɴᴇ's Fᴇᴀᴛᴜʀᴇꜱ
+➜ Mᴜʟᴛɪ Lᴀɴɢᴜᴀɢᴇ Sᴜᴩᴩᴏʀᴛ Nᴏ Aʙᴜꜱᴇ
+➜ 24x7 Fᴀꜱᴛ Rᴇꜱᴩᴏɴꜱᴇ
+────── ⋅ ⋅ ────── ⋅ ⋅ ⋅
+
+๏ 𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘 𝗠𝗘 ?
+➜ Aᴅᴅ Mᴇ Bᴀʙʏ ʏᴏᴜʀ Gʀᴏᴜᴩ
+➜ Uꜱᴇ /Chatbot On ᴛᴏ Eɴᴀʙʟᴇ
+➜ Uꜱᴇ /Chatbot Off ᴛᴏ Dɪꜱᴀʙʟᴇ
+────── ⋅ ⋅ ────── ⋅ ⋅ ⋅
+
+➜ Cʟɪᴄᴋ Tʜᴇ Hᴇʟᴩ Bᴜᴛᴛᴏɴ Fᴏʀ Mᴏʀᴇ Cᴏᴍᴍᴀɴᴅꜱ 🫶
+</blockquote>"""
     )
 
     # ---------- BUTTONS ----------
