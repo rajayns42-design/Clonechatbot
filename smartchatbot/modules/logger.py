@@ -3,21 +3,22 @@ from telegram.ext import ContextTypes
 from ..config import LOGGER_GROUP
 
 # =========================
-# USER START LOG (Jab koi /start dabaye)
+# USER /START LOG
 # =========================
 async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    if not LOGGER_GROUP or not user: return
+    if not LOGGER_GROUP or not user:
+        return
 
-    # User ki profile photo nikaalne ke liye
+    # User ki profile photo fetch karna
     photo_id = None
     try:
         photos = await context.bot.get_user_profile_photos(user.id)
         if photos.total_count > 0:
             photo_id = photos.photos[0][-1].file_id
-    except: pass
+    except:
+        pass
 
-    # Message text format
     text = (
         "👤 <b>NEW USER STARTED!</b>\n\n"
         f"📝 <b>Name:</b> {user.first_name}\n"
@@ -34,19 +35,22 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(f"User start log error: {e}")
 
+
 # =========================
-# GROUP ADD LOG (Jab bot group mein add ho)
+# BOT GROUP ADD LOG
 # =========================
 async def log_group_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.my_chat_member: return
-    
-    # Check karna ki bot ko add kiya gaya hai
+    if not update.my_chat_member:
+        return
+
+    # Check karna ki bot ko add kiya gaya
     if update.my_chat_member.new_chat_member.status == "member":
         chat = update.effective_chat
-        user = update.effective_user # Jisne add kiya
-        if not LOGGER_GROUP: return
+        user = update.effective_user  # Jisne bot ko add kiya
+        if not LOGGER_GROUP:
+            return
 
-        # Group link nikaalne ki koshish
+        # Group ka invite link nikalna (agar permissions ho)
         try:
             link = await chat.export_invite_link()
         except:
