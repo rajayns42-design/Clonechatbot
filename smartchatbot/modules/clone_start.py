@@ -155,15 +155,25 @@ async def clone_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         ]
     ]
 
-    text = (
-        f"👋 Hey <a href='tg://user?id={user.id}'>{user.first_name}</a>\n\n"
-        f"🤖 I'm <b>{bot.first_name}</b>\n\n"
-        f"🆔 <code>{user.id}</code>\n"
-        f"🏷 @{user.username if user.username else 'NoUsername'}\n\n"
-        "AI Assistant • Chat • Clone • Smart Reply\n"
-        "Use /ping to check speed ⚡"
-    )
+    text = 
+        text = f"""<blockquote>
+𝖧𝖾𝗒 [{user.first_name}](tg://user?id={user.id})
+I'ᴍ {bot_name}
+────── ⋅ ⋅ ────── ⋅ ⋅ ⋅
+๏ 𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?
+➜ Wɪᴛʜ Aɪ /Cʟᴏɴᴇ's Fᴇᴀᴛᴜʀᴇꜱ
+➜ Mᴜʟᴛɪ Lᴀɴɢᴜᴀɢᴇ Sᴜᴩᴩᴏʀᴛ Nᴏ Aʙᴜꜱᴇ
+➜ 24x7 Fᴀꜱᴛ Rᴇꜱᴩᴏɴꜱᴇ
+────── ⋅ ⋅ ────── ⋅ ⋅ ⋅
 
+๏ 𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘 𝗠𝗘 ?
+➜ Aᴅᴅ Mᴇ Bᴀʙʏ ʏᴏᴜʀ Gʀᴏᴜᴩ
+➜ Uꜱᴇ /Chatbot On ᴛᴏ Eɴᴀʙʟᴇ
+➜ Uꜱᴇ /Chatbot Off ᴛᴏ Dɪꜱᴀʙʟᴇ
+────── ⋅ ⋅ ────── ⋅ ⋅ ⋅
+
+➜ Cʟɪᴄᴋ Tʜᴇ Hᴇʟᴩ Bᴜᴛᴛᴏɴ Fᴏʀ Mᴏʀᴇ Cᴏᴍᴍᴀɴᴅꜱ 🫶
+</blockquote>"""
     if update.message:
         await update.message.reply_photo(
             photo=photo_id,
