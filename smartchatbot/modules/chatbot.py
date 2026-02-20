@@ -6,10 +6,6 @@ from mistralai import Mistral
 from telegram import Update
 from telegram.ext import ContextTypes
 
-# =========================
-# IMPORT YOUR CONFIG + DB
-# =========================
-
 from ..database import get_chat_status, set_chat_status
 from ..config import (
     GEMINI_API_KEY,
@@ -21,7 +17,6 @@ from ..config import (
 # =========================
 # AI CLIENTS
 # =========================
-
 gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY)
 mistral_client = Mistral(api_key=MISTRAL_API_KEY)
@@ -34,7 +29,6 @@ SYSTEM_PROMPT = (
 # =========================
 # TEXT CLEANER
 # =========================
-
 def clean_for_telegram(text: str):
     return (
         text.replace('"', '')
@@ -49,7 +43,6 @@ def clean_for_telegram(text: str):
 # =========================
 # GEMINI CALL
 # =========================
-
 async def ask_gemini(user_text):
     try:
         r = gemini_client.models.generate_content(
@@ -58,16 +51,13 @@ async def ask_gemini(user_text):
             config={"max_output_tokens": 20, "temperature": 0.8}
         )
         if r.text:
-            print("AI → Gemini")
             return clean_for_telegram(r.text.split("\n")[0])
     except Exception as e:
         print("Gemini fail:", e)
 
-
 # =========================
 # GROQ CALL
 # =========================
-
 async def ask_groq(user_text):
     try:
         r = groq_client.chat.completions.create(
@@ -79,16 +69,13 @@ async def ask_groq(user_text):
             max_tokens=20,
             temperature=0.8
         )
-        print("AI → Groq")
         return clean_for_telegram(r.choices[0].message.content)
     except Exception as e:
         print("Groq fail:", e)
 
-
 # =========================
 # MISTRAL CALL
 # =========================
-
 async def ask_mistral(user_text):
     try:
         r = mistral_client.chat.complete(
@@ -100,49 +87,42 @@ async def ask_mistral(user_text):
             max_tokens=20,
             temperature=0.8
         )
-        print("AI → Mistral")
         return clean_for_telegram(r.choices[0].message.content)
     except Exception as e:
         print("Mistral fail:", e)
 
+# =========================
+# FALLBACK SHORT REPLIES
+# =========================
+FALLBACK_REPLIES = [
+    "Haan bol 😏",
+    "Sun rahi hu 😌",
+    "Acha ji 😜",
+    "Phir bol na 😉",
+    "Hmm sahi hai 😅"
+]
 
 # =========================
-# MASTER FALLBACK ENGINE
+# MASTER AI FUNCTION
 # =========================
-
-async def get_ai_reply(text):
-
+async def get_ai_reply(text: str):
     reply = await ask_gemini(text)
-    if reply:
-        return reply
-
+    if reply: return reply
     reply = await ask_groq(text)
-    if reply:
-        return reply
-
+    if reply: return reply
     reply = await ask_mistral(text)
-    if reply:
-        return reply
-
-    return random.choice([
-        "Network sharma gaya 😅",
-        "Phir bol na 😉",
-        "Sun rahi hu 😌",
-        "Acha ji tum 😜"
-    ])
+    if reply: return reply
+    return random.choice(FALLBACK_REPLIES)
 
 # =========================
-# /chatbot ON OFF COMMAND
+# /chatbot ON/OFF
 # =========================
-
 async def chatbot_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     user = update.effective_user
 
     if chat.type == "private":
-        return await update.message.reply_text(
-            "PM me toh main always on 😉"
-        )
+        return await update.message.reply_text("PM me toh main always on 😉")
 
     try:
         member = await context.bot.get_chat_member(chat.id, user.id)
@@ -152,58 +132,40 @@ async def chatbot_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     action = context.args[0].lower() if context.args else ""
-
     if action == "on":
         set_chat_status(chat.id, True)
-        await update.message.reply_text(
-            "✅ <b>NATKHAT ON</b> 😉",
-            parse_mode="HTML"
-        )
-
+        await update.message.reply_text("✅ <b>chatbot ON</b> Ab maja ayega 😉", parse_mode="HTML")
     elif action == "off":
         set_chat_status(chat.id, False)
-        await update.message.reply_text(
-            "📴 <b>NATKHAT OFF</b>",
-            parse_mode="HTML"
-        )
+        await update.message.reply_text("📴 <b>chatbot OFF</b>bye firr yad krna 🥺", parse_mode="HTML")
 
 # =========================
 # MAIN MESSAGE HANDLER
 # =========================
-
 async def chatbot_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not update.message or not update.message.text:
         return
 
+    # Ignore commands
+    if update.message.text.startswith("/"):
+        return
+
     chat = update.effective_chat
     chat_id = chat.id
 
-    # group off check
+    # Group off check
     if chat.type != "private" and not get_chat_status(chat_id):
         return
 
     is_reply_to_bot = (
-        update.message.reply_to_message and
-        update.message.reply_to_message.from_user.id == context.bot.id
+        update.message.reply_to_message
+        and update.message.reply_to_message.from_user.id == context.bot.id
     )
-
     is_tagged = f"@{context.bot.username}" in update.message.text
 
     if chat.type == "private" or is_reply_to_bot or is_tagged:
-
-        await context.bot.send_chat_action(
-            chat_id=chat_id,
-            action="typing"
-        )
-
-        text = update.message.text.replace(
-            f"@{context.bot.username}", ""
-        ).strip()
-
+        await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+        text = update.message.text.replace(f"@{context.bot.username}", "").strip()
         reply = await get_ai_reply(text)
-
-        try:
-            await update.message.reply_text(reply, parse_mode="HTML")
-        except:
-            await update.message.reply_text(reply)
+        await update.message.reply_text(reply)
