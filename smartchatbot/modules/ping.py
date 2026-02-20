@@ -1,44 +1,63 @@
 import time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+from ..config import START_IMG, OWNER_ID
 
 async def ping_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Bot ki speed check karne ke liye (Master aur Clones dono ke liye)"""
+    user = update.effective_user
+    bot = await context.bot.get_me()
     
-    # Message aane ka time note karein
+    # Latency calculate karne ke liye start time
     start_time = time.time()
     
-    # Bot ka username nikalna taaki pata chale kaunsa clone reply kar raha hai
-    bot_username = (await context.bot.get_me()).username
+    # 1. User ki profile photo fetch karna
+    user_photo = START_IMG
+    try:
+        photos = await context.bot.get_user_profile_photos(user.id)
+        if photos.total_count > 0:
+            user_photo = photos.photos[0][-1].file_id
+    except:
+        pass
+
+    # 2. Speed check ke liye temporary animation
+    msg = await update.message.reply_text("⚡")
     
-    # Temporary message
-    sent_message = await update.message.reply_text(
-        f"⚡ **Pinging @{bot_username}...**", 
-        parse_mode="Markdown"
-    )
-    
-    # Reply ke baad ka time
     end_time = time.time()
+    ping_ms = round((end_time - start_time) * 1000, 3)
     
-    # Latency in milliseconds
-    ms = round((end_time - start_time) * 1000)
+    # 3. Full Blockquote Text (HTML Mode)
+    # 
+    text = (
+        f"<blockquote>\n"
+        f"нᴇу <a href='tg://user?id={user.id}'>{user.first_name}</a> !!\n"
+        f"╰─ <b>{bot.first_name}</b> 🍓 Is αℓινє 🥀 αη∂ ωᴏяᴋιηɢ\n"
+        f"ғιηє ωιтн α ριηɢ ᴏғ\n"
+        f"➡ <code>{ping_ms} ms</code>\n\n"
+        f"мα∂є ву 💗 <a href='tg://user?id={OWNER_ID}'>𝐇𝐀𝐑𝐈</a> 🥀\n"
+        f"</blockquote>"
+    )
     
-    # Close button
-    keyboard = [[InlineKeyboardButton("🗑 Close", callback_data="close_ping")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    # Final result update karein
-    await sent_message.edit_text(
-        f"🚀 **Pong!**\n\n"
-        f"👤 **Bot:** @{bot_username}\n"
-        f"📡 **Latency:** `{ms}ms`\n"
-        f"📶 **Status:** `Active`",
-        parse_mode="Markdown",
-        reply_markup=reply_markup
+    # 4. Screenshot wale buttons
+    buttons = [
+        [
+            InlineKeyboardButton("⌯ 𝐀ᴅᴅ Mᴇ Bᴀʙʏ ⌯", url=f"https://t.me/{bot.username}?startgroup=true")
+        ],
+        [
+            InlineKeyboardButton("🗑 ᴄʟᴏꜱᴇ", callback_data="close_ping")
+        ]
+    ]
+    
+    # 5. Purana message delete karke naya Photo + Blockquote Caption bhejega
+    await msg.delete()
+    await update.message.reply_photo(
+        photo=user_photo, 
+        caption=text, 
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="HTML"
     )
 
-# Callback handler for Close button (Optional but good)
+# Close button handler
 async def ping_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    if query.data == "close_ping":
-        await query.message.delete()
+    await query.answer()
+    await query.message.delete()
