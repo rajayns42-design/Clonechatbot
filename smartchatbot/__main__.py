@@ -1,4 +1,4 @@
-import logging
+import logger 
 import sys
 from telegram import Update, BotCommand
 from telegram.ext import (
@@ -27,7 +27,7 @@ from smartchatbot.modules.admin import (
     get_user_id, welcome_toggle
 )
 from smartchatbot.modules.welcome import welcome_member
-from smartchatbot.modules.logging import log_bot_on, log_group_add
+from smartchatbot.modules.logger import log_bot_on, log_group_add
 from smartchatbot.modules.broadcast import broadcast_handler
 
 # Logging Setup
