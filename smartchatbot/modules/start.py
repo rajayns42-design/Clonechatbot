@@ -1,109 +1,118 @@
 import time
+import random
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+from bot.config import Config
+from bot.database import register_user
+from bot.logging import log_user_start
 
-from ..config import START_IMG, OWNER_USERNAME, SUPPORT_GROUP, UPDATE_CHANNEL, OWNER_ID
+# Bot start time record
+BOT_START_TIME = time.time()
 
-# =========================
-# START COMMAND (WITH PROFILE PIC)
-# =========================
+def get_readable_time(seconds: int) -> str:
+    count = 0
+    time_list = []
+    time_suffix_list = ["s", "m", "h", "d"]
+    while count < 4:
+        count += 1
+        remainder, result = divmod(seconds, 60) if count < 3 else divmod(seconds, 24)
+        if seconds == 0 and remainder == 0: break
+        time_list.append(int(result))
+        seconds = int(remainder)
+    for x in range(len(time_list)):
+        time_list[x] = str(time_list[x]) + time_suffix_list[x]
+    time_list.reverse()
+    return ":".join(time_list)
+
+def start_buttons(bot_username):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("⌯ ᴀᴅᴅ ᴍᴇ ʙᴀʙʏ ⌯", url=f"https://t.me/{bot_username}?startgroup=true")],
+        [
+            InlineKeyboardButton("🥀 Bᴏᴏᴋ", callback_data="help_menu"),
+            InlineKeyboardButton("⌯ Hᴀʀɪ ⌯", url=f"https://t.me/{Config.OWNER_USERNAME.replace('@','')}")
+        ],
+        [
+            InlineKeyboardButton("📨 Uᴩᴅᴀᴛᴇ", url=Config.UPDATES_CHANNEL),
+            InlineKeyboardButton("📨 Sᴜᴩᴩᴏʀᴛ", url=Config.SUPPORT_CHAT)
+        ]
+    ])
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     bot = await context.bot.get_me()
+    
+    # DB and Logging
+    await register_user(user.id, user.first_name, user.username)
+    await log_user_start(update, context)
 
-    display_img = START_IMG
-    try:
-        photos = await context.bot.get_user_profile_photos(user.id)
-        if photos.total_count > 0:
-            display_img = photos.photos[0][-1].file_id
-    except:
-        pass
-
-    text = (
+    # Naya Start Text with Full Blockquote
+    START_TEXT = (
         f"<blockquote>\n"
         f"𝖧𝖾𝗒 <a href='tg://user?id={user.id}'>{user.first_name}</a>\n"
-        f"I'ᴍ {bot.first_name}\n\n"
+        f"I'ᴍ <b>{bot.first_name}</b>\n\n"
         "๏ 𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?\n"
         "➜ I'ᴍ A Sᴍᴀʀᴛ Aɪ Cʜᴀᴛ Aꜱꜱɪꜱᴛᴀɴᴛ\n"
+        "➜ Hᴜᴍᴀɴ-Lɪᴋᴇ Rᴇᴩʟʏ\n"
+        "➜ Mᴜʟᴛɪ Lᴀɴɢᴜᴀɢᴇ Sᴜᴩᴩᴏʀᴛ Nᴏ Aʙᴜꜱᴇ\n\n"
         "➜ 24x7 Fᴀꜱᴛ Rᴇꜱᴩᴏɴꜱᴇ\n"
         "────── ⋅ ⋅ ────── ⋅ ⋅ ⋅\n"
+        "๏ <b>𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘 𝗠𝗘 ?</b>\n"
+        "➜ Aᴅᴅ Mᴇ Bᴀʙʏ ʏᴏᴜʀ Gʀᴏᴜᴩ\n"
+        "➜ Uꜱᴇ /Chatbot Oɴ ᴛᴏ Eɴᴀʙʟᴇ\n"
+        "➜ Uꜱᴇ /Chatbot Oꜰꜰ ᴛᴏ Dɪꜱᴀʙʟᴇ\n\n"
         "➜ Cʟɪᴄᴋ Tʜᴇ Hᴇʟᴩ Bᴜᴛᴛᴏɴ Fᴏʀ Mᴏʀᴇ Cᴏᴍᴍᴀɴᴅꜱ 🫶\n"
-        "</blockquote>"
+        f"</blockquote>"
     )
-
-    buttons = [
-        [InlineKeyboardButton("⌯ ᴀᴅᴅ ᴍᴇ ʙᴀʙʏ ⌯", url=f"https://t.me/{bot.username}?startgroup=true")],
-        [
-            InlineKeyboardButton("🥀 Bᴏᴏᴋ", callback_data="help_menu"),
-            InlineKeyboardButton("⌯ Hᴀʀɪ ⌯", url=f"https://t.me/{OWNER_USERNAME.replace('@','')}")
-        ],
-        [
-            InlineKeyboardButton("📨Uᴩᴅᴀᴛᴇ", url=UPDATE_CHANNEL),
-            InlineKeyboardButton("📨Sᴜᴩᴩᴏʀᴛ", url=SUPPORT_GROUP)
-        ],
-        [InlineKeyboardButton("🏓 Ping", callback_data="ping_btn")]
-    ]
 
     if update.message:
-        await update.message.reply_photo(photo=display_img, caption=text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(buttons))
-    elif update.callback_query:
-        try:
-            await update.callback_query.message.edit_caption(caption=text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(buttons))
-        except:
-            await update.callback_query.message.reply_photo(photo=display_img, caption=text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(buttons))
+        await update.message.reply_photo(
+            photo=Config.START_IMG,
+            caption=START_TEXT,
+            reply_markup=start_buttons(bot.username),
+            parse_mode="HTML"
+        )
+    else:
+        await update.callback_query.message.edit_caption(
+            caption=START_TEXT,
+            reply_markup=start_buttons(bot.username),
+            parse_mode="HTML"
+        )
 
-# =========================
-# HELP & PING HANDLERS
-# =========================
-async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# =========================================
+# ✶ HELP MENU (Full Blockquote)
+# =========================================
+async def help_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    if query: await query.answer()
+    await query.answer()
 
     help_text = (
+        f"<blockquote>\n"
         "✨ <b>Hᴇᴩ Bᴏᴏᴋ</b> ✨\n\n"
-        "👤 <b>Commands:</b>\n"
-        "• /start — Start bot\n"
-        "• /ping — Check speed\n"
-        "• /chatbot on/off — Enable AI\n"
-    )
-    back = [[InlineKeyboardButton("⬅️ Back", callback_data="start_back")]]
-    await query.edit_message_caption(caption=help_text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(back))
-
-async def ping_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    start_time = time.time()
-    user = update.effective_user
-    
-    if update.callback_query:
-        await update.callback_query.answer("Checking...")
-        msg = await update.callback_query.message.reply_text("⚡")
-    else:
-        msg = await update.message.reply_text("⚡")
-        
-    ping_ms = round((time.time() - start_time) * 1000, 3)
-    text = f"<blockquote>нᴇу {user.first_name}!!\n➡ <code>{ping_ms} ms</code></blockquote>"
-    
-    user_photo = START_IMG
-    try:
-        photos = await context.bot.get_user_profile_photos(user.id)
-        if photos.total_count > 0: user_photo = photos.photos[0][-1].file_id
-    except: pass
-
-    await msg.delete()
-    await context.bot.send_photo(
-        chat_id=update.effective_chat.id,
-        photo=user_photo,
-        caption=text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗑 Close", callback_data="close_ping")]])
+        "👤 <b>User Commands:</b>\n"
+        "• /start — Start the bot\n"
+        "• /ping — Check latency\n\n"
+        "⚙️ <b>Group Settings:</b>\n"
+        "• /chatbot on — Enable AI\n"
+        "• /chatbot off — Disable AI\n"
+        f"</blockquote>"
     )
 
-# MISSING HANDLER FIXED
-async def ping_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query:
-        await update.callback_query.answer()
-        await update.callback_query.message.delete()
+    back = [[InlineKeyboardButton("⬅️ Bᴀᴄᴋ", callback_data="back_start")]]
 
-async def close_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query:
-        await update.callback_query.answer()
-        await update.callback_query.message.delete()
+    await query.edit_message_caption(
+        caption=help_text,
+        reply_markup=InlineKeyboardMarkup(back),
+        parse_mode="HTML"
+    )
+
+# =========================================
+# ✶ CALLBACK HANDLER
+# =========================================
+async def help_button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    data = query.data
+    
+    if data == "back_start":
+        await start(update, context)
+    elif data == "help_menu":
+        await help_menu(update, context)
