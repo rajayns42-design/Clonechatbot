@@ -1,28 +1,12 @@
 import time
-import random
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import ContextTypes
 from bot.config import Config
 from bot.database import register_user
-from bot.logging import log_user_start
+from bot.modules.logging import log_user_start
 
 # Bot start time record
 BOT_START_TIME = time.time()
-
-def get_readable_time(seconds: int) -> str:
-    count = 0
-    time_list = []
-    time_suffix_list = ["s", "m", "h", "d"]
-    while count < 4:
-        count += 1
-        remainder, result = divmod(seconds, 60) if count < 3 else divmod(seconds, 24)
-        if seconds == 0 and remainder == 0: break
-        time_list.append(int(result))
-        seconds = int(remainder)
-    for x in range(len(time_list)):
-        time_list[x] = str(time_list[x]) + time_suffix_list[x]
-    time_list.reverse()
-    return ":".join(time_list)
 
 def start_buttons(bot_username):
     return InlineKeyboardMarkup([
@@ -41,45 +25,60 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     bot = await context.bot.get_me()
     
-    # DB and Logging
+    # Database me user save karna
     await register_user(user.id, user.first_name, user.username)
+    
+    # Logger group me photo ke sath log bhejna
     await log_user_start(update, context)
 
-    # Naya Start Text with Full Blockquote
+    # --- PROFILE PHOTO FETCH LOGIC ---
+    # Default photo agar user ki DP na miley
+    chat_photo = Config.START_IMG 
+    try:
+        photos = await context.bot.get_user_profile_photos(user.id)
+        if photos.total_count > 0:
+            # Sabse latest aur badi size wali photo
+            chat_photo = photos.photos[0][-1].file_id
+    except Exception as e:
+        print(f"Error fetching profile photo: {e}")
+
     START_TEXT = (
         f"<blockquote>\n"
-        f"𝖧𝖾𝗒 <a href='tg://user?id={user.id}'>{user.first_name}</a>\n"
+        f"𝖧𝖾𝗒 <a href='tg://user?id={user.id}'>{user.first_name}</a> ✨\n"
         f"I'ᴍ <b>{bot.first_name}</b>\n\n"
         "๏ 𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?\n"
         "➜ I'ᴍ A Sᴍᴀʀᴛ Aɪ Cʜᴀᴛ Aꜱꜱɪꜱᴛᴀɴᴛ\n"
-        "➜ Hᴜᴍᴀɴ-Lɪᴋᴇ Rᴇᴩʟʏ\n"
-        "➜ Mᴜʟᴛɪ Lᴀɴɢᴜᴀɢᴇ Sᴜᴩᴩᴏʀᴛ Nᴏ Aʙᴜꜱᴇ\n\n"
-        "➜ 24x7 Fᴀꜱᴛ Rᴇꜱᴩᴏɴꜱᴇ\n"
-        "────── ⋅ ⋅ ────── ⋅ ⋅ ⋅\n"
-        "๏ <b>𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘 𝗠𝗘 ?</b>\n"
-        "➜ Aᴅᴅ Mᴇ Bᴀʙʏ ʏᴏᴜʀ Gʀᴏᴜᴩ\n"
-        "➜ Uꜱᴇ /Chatbot Oɴ ᴛᴏ Eɴᴀʙʟᴇ\n"
-        "➜ Uꜱᴇ /Chatbot Oꜰꜰ ᴛᴏ Dɪꜱᴀʙʟᴇ\n\n"
-        "➜ Cʟɪᴄᴋ Tʜᴇ Hᴇʟᴩ Bᴜᴛᴛᴏɴ Fᴏʀ Mᴏʀᴇ Cᴏᴍᴍᴀɴᴅꜱ 🫶\n"
+        "➜ Uꜱᴇ /Chatbot Oɴ ᴛᴏ Eɴᴀʙʟᴇ\n\n"
+        "➜ Cʟɪᴄᴋ Tʜᴇ Hᴇʟᴩ Bᴜᴛᴛᴏɴ Fᴏʀ Mᴏʀᴇ! 🫶\n"
         f"</blockquote>"
     )
 
-    if update.message:
-        await update.message.reply_photo(
-            photo=Config.START_IMG,
-            caption=START_TEXT,
-            reply_markup=start_buttons(bot.username),
-            parse_mode="HTML"
-        )
+    # Agar buttons ke callback (Back) se aaya hai
+    if update.callback_query:
+        try:
+            await update.callback_query.message.edit_media(
+                media=InputMediaPhoto(media=chat_photo, caption=START_TEXT, parse_mode="HTML"),
+                reply_markup=start_buttons(bot.username)
+            )
+        except:
+            # Agar edit nahi ho pa raha (photo type change), toh naya bhej do
+            await update.callback_query.message.reply_photo(
+                photo=chat_photo,
+                caption=START_TEXT,
+                reply_markup=start_buttons(bot.username),
+                parse_mode="HTML"
+            )
+    # Naya /start command
     else:
-        await update.callback_query.message.edit_caption(
+        await update.message.reply_photo(
+            photo=chat_photo,
             caption=START_TEXT,
             reply_markup=start_buttons(bot.username),
             parse_mode="HTML"
         )
 
 # =========================================
-# ✶ HELP MENU (Full Blockquote)
+# ✶ HELP MENU
 # =========================================
 async def help_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -90,10 +89,10 @@ async def help_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✨ <b>Hᴇᴩ Bᴏᴏᴋ</b> ✨\n\n"
         "👤 <b>User Commands:</b>\n"
         "• /start — Start the bot\n"
-        "• /ping — Check latency\n\n"
+        "• /id — Get your info\n\n"
         "⚙️ <b>Group Settings:</b>\n"
-        "• /chatbot on — Enable AI\n"
-        "• /chatbot off — Disable AI\n"
+        "• /chatbot on — AI Enable\n"
+        "• /chatbot off — AI Disable\n"
         f"</blockquote>"
     )
 
@@ -110,9 +109,7 @@ async def help_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================================
 async def help_button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    data = query.data
-    
-    if data == "back_start":
+    if query.data == "back_start":
         await start(update, context)
-    elif data == "help_menu":
+    elif query.data == "help_menu":
         await help_menu(update, context)
