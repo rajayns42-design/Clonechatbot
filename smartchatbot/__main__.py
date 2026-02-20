@@ -1,4 +1,4 @@
-import logger 
+import logging 
 import sys
 from telegram import Update, BotCommand
 from telegram.ext import (
