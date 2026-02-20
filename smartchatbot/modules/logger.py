@@ -1,6 +1,32 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 from ..config import LOGGER_GROUP
+import time
+
+# =========================
+# BOT DEPLOY/STARTUP LOG
+# =========================
+async def log_bot_on(context: ContextTypes.DEFAULT_TYPE):
+    """Bot start hone par logger group me message bhejega"""
+    if not LOGGER_GROUP:
+        return
+
+    bot_info = await context.bot.get_me()
+    
+    text = (
+        f"🚀 <b>BOT DEPLOYED SUCCESSFULLY!</b>\n"
+        f"<blockquote>\n"
+        f"🤖 <b>Bot:</b> @{bot_info.username}\n"
+        f"🆔 <b>ID:</b> <code>{bot_info.id}</code>\n"
+        f"🛰️ <b>Status:</b> Online & Healthy ✅\n"
+        f"⏰ <b>Time:</b> <code>{time.strftime('%Y-%m-%d %H:%M:%S')}</code>\n"
+        f"</blockquote>"
+    )
+
+    try:
+        await context.bot.send_message(chat_id=int(LOGGER_GROUP), text=text, parse_mode="HTML")
+    except Exception as e:
+        print(f"Startup log error: {e}")
 
 # =========================
 # USER /START LOG
@@ -10,7 +36,6 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not LOGGER_GROUP or not user:
         return
 
-    # User ki profile photo fetch karna
     photo_id = None
     try:
         photos = await context.bot.get_user_profile_photos(user.id)
@@ -20,11 +45,12 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     text = (
-        "👤 <b>NEW USER STARTED!</b>\n\n"
+        f"👤 <b>NEW USER STARTED!</b>\n"
+        f"<blockquote>\n"
         f"📝 <b>Name:</b> {user.first_name}\n"
         f"🆔 <b>ID:</b> <code>{user.id}</code>\n"
         f"🏷 <b>Username:</b> @{user.username if user.username else 'N/A'}\n"
-        f"🤖 <b>Bot:</b> @{(await context.bot.get_me()).username}"
+        f"</blockquote>"
     )
 
     try:
@@ -33,8 +59,7 @@ async def log_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await context.bot.send_message(chat_id=int(LOGGER_GROUP), text=text, parse_mode="HTML")
     except Exception as e:
-        print(f"User start log error: {e}")
-
+        print(f"User log error: {e}")
 
 # =========================
 # BOT GROUP ADD LOG
@@ -43,27 +68,26 @@ async def log_group_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.my_chat_member:
         return
 
-    # Check karna ki bot ko add kiya gaya
-    if update.my_chat_member.new_chat_member.status == "member":
+    if update.my_chat_member.new_chat_member.status in ["member", "administrator"]:
         chat = update.effective_chat
-        user = update.effective_user  # Jisne bot ko add kiya
-        if not LOGGER_GROUP:
-            return
+        user = update.effective_user
+        
+        if not LOGGER_GROUP: return
 
-        # Group ka invite link nikalna (agar permissions ho)
         try:
             link = await chat.export_invite_link()
         except:
-            link = "No Link (Admin Rights Missing)"
+            link = "No Link"
 
         text = (
-            "🏰 <b>BOT ADDED TO NEW GROUP!</b>\n\n"
-            f"👥 <b>Group Name:</b> {chat.title}\n"
-            f"🆔 <b>Group ID:</b> <code>{chat.id}</code>\n"
+            f"🏰 <b>BOT ADDED TO GROUP!</b>\n"
+            f"<blockquote>\n"
+            f"👥 <b>Group:</b> {chat.title}\n"
+            f"🆔 <b>G-ID:</b> <code>{chat.id}</code>\n"
             f"🔗 <b>Link:</b> {link}\n\n"
             f"👤 <b>Added By:</b> {user.first_name}\n"
-            f"🆔 <b>User ID:</b> <code>{user.id}</code>\n"
-            f"🏷 <b>Username:</b> @{user.username if user.username else 'N/A'}"
+            f"🆔 <b>U-ID:</b> <code>{user.id}</code>\n"
+            f"</blockquote>"
         )
 
         try:
