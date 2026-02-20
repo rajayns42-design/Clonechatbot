@@ -1,12 +1,14 @@
 from pymongo import MongoClient
 import certifi
-from .config import MONGO_URL
+# Humne yahan 'Config' class ko import kiya hai
+from .config import Config
 
 # =========================
 # MONGO CONNECT (SSL/TLS SAFE)
 # =========================
+# Ab hum Config.MONGO_URL use karenge
 client = MongoClient(
-    MONGO_URL,
+    Config.MONGO_URL,
     tlsCAFile=certifi.where(),
     serverSelectionTimeoutMS=5000
 )
