@@ -1,57 +1,132 @@
+import asyncio
 import google.generativeai as genai
 from groq import Groq
 from mistralai.client import MistralClient
-import httpx # Iske liye 'pip install httpx' zaroori hai
-from smartchatbot.config import GEMINI_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY
+import httpx
 
-async def fallback_ai(prompt):
-    """
-    Jab saare API keys fail ho jayein, tab ye free public engine use hoga.
-    """
+from smartchatbot.config import (
+    GEMINI_API_KEY,
+    GROQ_API_KEY,
+    MISTRAL_API_KEY
+)
+
+# =========================
+# FREE FALLBACK ENGINE
+# =========================
+
+async def fallback_ai(prompt: str) -> str:
     try:
-        # Hum yahan ek free public AI API use kar rahe hain jo open hai
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.pawan.krd/v1/chat/completions", # Example Public API
+        async with httpx.AsyncClient(timeout=12) as client:
+            r = await client.post(
+                "https://api.pawan.krd/v1/chat/completions",
                 json={
                     "model": "gpt-3.5-turbo",
                     "messages": [{"role": "user", "content": prompt}]
-                },
-                timeout=10.0
+                }
             )
-            res_data = response.json()
-            return res_data['choices'][0]['message']['content']
-    except Exception:
-        return "❌ Saare AI engines (Gemini, Groq, Mistral, Free) down hain. Kripya 1 minute baad try karein."
+            data = r.json()
+            return data["choices"][0]["message"]["content"]
+    except Exception as e:
+        print("Fallback failed:", e)
+        return "🙂 Server busy hai — thodi der baad try karo."
 
-async def get_combined_ai_response(prompt):
-    # 1. TRY GEMINI
-    if GEMINI_API_KEY:
-        try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(prompt)
-            if response.text: return response.text
-        except: pass
 
-    # 2. TRY GROQ
-    if GROQ_API_KEY:
-        try:
-            client = Groq(api_key=GROQ_API_KEY)
-            completion = client.chat.completions.create(
+# =========================
+# GEMINI
+# =========================
+
+async def ask_gemini(prompt: str):
+    if not GEMINI_API_KEY:
+        return None
+
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: model.generate_content(prompt)
+        )
+
+        return response.text
+    except Exception as e:
+        print("Gemini error:", e)
+        return None
+
+
+# =========================
+# GROQ
+# =========================
+
+async def ask_groq(prompt: str):
+    if not GROQ_API_KEY:
+        return None
+
+    try:
+        client = Groq(api_key=GROQ_API_KEY)
+
+        loop = asyncio.get_event_loop()
+        completion = await loop.run_in_executor(
+            None,
+            lambda: client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "user", "content": prompt}]
             )
-            return completion.choices[0].message.content
-        except: pass
+        )
 
-    # 3. TRY MISTRAL
-    if MISTRAL_API_KEY:
-        try:
-            m_client = MistralClient(api_key=MISTRAL_API_KEY)
-            m_res = m_client.chat(model="mistral-small-latest", messages=[{"role": "user", "content": prompt}])
-            return m_res.choices[0].message.content
-        except: pass
+        return completion.choices[0].message.content
+    except Exception as e:
+        print("Groq error:", e)
+        return None
 
-    # 4. ULTIMATE BACKUP (Jab kuch kaam na kare)
+
+# =========================
+# MISTRAL
+# =========================
+
+async def ask_mistral(prompt: str):
+    if not MISTRAL_API_KEY:
+        return None
+
+    try:
+        m_client = MistralClient(api_key=MISTRAL_API_KEY)
+
+        loop = asyncio.get_event_loop()
+        res = await loop.run_in_executor(
+            None,
+            lambda: m_client.chat(
+                model="mistral-small-latest",
+                messages=[{"role": "user", "content": prompt}]
+            )
+        )
+
+        return res.choices[0].message.content
+    except Exception as e:
+        print("Mistral error:", e)
+        return None
+
+
+# =========================
+# MASTER ENGINE
+# =========================
+
+async def get_combined_ai_response(prompt: str) -> str:
+
+    # Gemini
+    r = await ask_gemini(prompt)
+    if r:
+        return r
+
+    # Groq
+    r = await ask_groq(prompt)
+    if r:
+        return r
+
+    # Mistral
+    r = await ask_mistral(prompt)
+    if r:
+        return r
+
+    # Final fallback
     return await fallback_ai(prompt)
