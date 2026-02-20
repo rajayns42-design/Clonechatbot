@@ -1,4 +1,5 @@
 import logging
+import sys
 from telegram import Update, BotCommand
 from telegram.ext import (
     ApplicationBuilder, 
@@ -10,23 +11,27 @@ from telegram.ext import (
     ContextTypes
 )
 
-# Relative Imports Fix (Adding dots for Heroku/Package structure)
+# ==========================================
+# ✶ FIXING IMPORTS FOR HEROKU
+# ==========================================
+# Hum seedha 'smartchatbot' package se import karenge 
+# taki folder structure ka koi issue na rahe.
 try:
-    from .config import Config
-    from .database import register_user
-    from .modules.start import start, help_menu, help_button_callback
-    from .modules.ping import ping
-    from .modules.chatbot import chatbot_reply, chatbot_toggle
-    from .modules.admin import (
+    from smartchatbot.config import Config
+    from smartchatbot.database import register_user
+    from smartchatbot.modules.start import start, help_menu, help_button_callback
+    from smartchatbot.modules.ping import ping
+    from smartchatbot.modules.chatbot import chatbot_reply, chatbot_toggle
+    from smartchatbot.modules.admin import (
         get_admin_list, ban_user, unban_user, 
         mute_user, unmute_user, promote_user, 
         get_user_id, welcome_toggle
     )
-    from .modules.welcome import welcome_member
-    from .modules.logging import log_bot_on, log_group_add
-    from .modules.broadcast import broadcast_handler
+    from smartchatbot.modules.welcome import welcome_member
+    from smartchatbot.modules.logging import log_bot_on, log_group_add
+    from smartchatbot.modules.broadcast import broadcast_handler
 except ImportError:
-    # Local testing ke liye agar relative import fail ho
+    # Agar aap folder ke andar se test kar rahe hain (Local Testing)
     from config import Config
     from database import register_user
     from modules.start import start, help_menu, help_button_callback
@@ -47,9 +52,6 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# ==========================================
-# ✶ SET BOT COMMANDS MENU
-# ==========================================
 async def set_bot_commands(application):
     commands = [
         BotCommand("start", "Bot ko chalu karein ✨"),
@@ -67,11 +69,7 @@ async def set_bot_commands(application):
     ]
     await application.bot.set_my_commands(commands)
 
-# ==========================================
-# ✶ BOT STARTUP SIGNAL
-# ==========================================
 async def post_init(application):
-    """Bot deploy hote hi commands set karega aur log bhejega"""
     await set_bot_commands(application)
     try:
         await log_bot_on(application)
@@ -79,22 +77,19 @@ async def post_init(application):
     except Exception as e:
         print(f"Startup Log Error: {e}")
 
-# ==========================================
-# ✶ HELPER: CLOSE CALLBACK
-# ==========================================
 async def close_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     await query.message.delete()
 
-# ==========================================
-# ✶ MAIN ENGINE
-# ==========================================
 def main():
-    # Build Application
+    if not Config.BOT_TOKEN:
+        print("❌ ERROR: BOT_TOKEN is missing in Config!")
+        return
+
     application = ApplicationBuilder().token(Config.BOT_TOKEN).post_init(post_init).build()
 
-    # Handlers
+    # Handlers setup
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_menu))
     application.add_handler(CommandHandler("ping", ping))
@@ -117,7 +112,6 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatbot_reply))
     application.add_handler(ChatMemberHandler(log_group_add, ChatMemberHandler.MY_CHAT_MEMBER))
 
-    # Run Polling
     print("NATKHAT is Polling...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
