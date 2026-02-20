@@ -25,15 +25,20 @@ def start_buttons(bot_username):
         ]
     ])
 
+# ==========================================
+# ✶ START LOGIC (Command + Callback)
+# ==========================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     bot = await context.bot.get_me()
     
-    # 1. Database & Logger
+    # 1. Database me user register karna
     register_user(user.id, user.first_name, user.username)
+    
+    # 2. Logger group me update bhejna
     await log_user_start(update, context)
 
-    # 2. Smart Photo Logic
+    # 3. Profile Photo fetch karna (Smart Logic)
     chat_photo = Config.START_IMG 
     try:
         photos = await user.get_profile_photos(limit=1)
@@ -48,7 +53,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"I'ᴍ <b>{bot.first_name}</b>\n\n"
         "๏ 𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?\n"
         "➜ I'ᴍ A Sᴍᴀʀᴛ Aɪ Cʜᴀᴛ Aꜱꜱɪꜱᴛᴀɴᴛ\n"
-        "➜ Hᴜᴍᴀɴ-Lɪᴋᴇ Rᴇᴩʟʏ\n\n"
+        "➜ Hᴜᴍᴀɴ-Lɪᴋᴇ Rᴇᴩʟʏ\n"
+        "➜ Mᴜʟᴛɪ Lᴀɴɢᴜᴀɢᴇ Sᴜᴩᴩᴏʀᴛ\n\n"
         "๏ 𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘 𝗠𝗘 ?\n"
         "➜ Aᴅᴅ Mᴇ Bᴀʙʏ ʏᴏᴜʀ Gʀᴏᴜᴩ\n"
         "➜ Uꜱᴇ /Chatbot Oɴ ᴛᴏ Eɴᴀʙʟᴇ\n\n"
@@ -56,18 +62,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"</blockquote>"
     )
 
-    # 3. Callback (Button) vs Message (Command) Handling
+    # Agar button dabakar pichle page par ja rahe hain (Back Button)
     if update.callback_query:
         query = update.callback_query
-        await query.answer()
         try:
-            # Media edit karega jab 'Back' dabayenge
             await query.edit_message_media(
                 media=InputMediaPhoto(media=chat_photo, caption=START_TEXT, parse_mode="HTML"),
                 reply_markup=start_buttons(bot.username)
             )
         except Exception:
-            # Agar edit fail ho toh naya photo bhej dega
+            # Agar edit nahi ho paya toh naya photo bhej do
             await query.message.reply_photo(
                 photo=chat_photo,
                 caption=START_TEXT,
@@ -84,34 +88,50 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 # =========================================
-# ✶ HELP MENU & CALLBACKS
+# ✶ HELP MENU LOGIC
 # =========================================
 async def help_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
+    # Help text jo user ko dikhega
     help_text = (
         f"<blockquote>\n"
         "✨ <b>Hᴇᴩ Bᴏᴏᴋ</b> ✨\n\n"
-        "👤 <b>User:</b> /start, /id\n"
-        "⚙️ <b>Group:</b> /chatbot on | off\n\n"
-        "➜ Mᴜʟᴛɪ Lᴀɴɢᴜᴀɢᴇ Sᴜᴩᴩᴏʀᴛ\n"
-        "➜ Hᴜᴍᴀɴ-Lɪᴋᴇ Rᴇᴩʟʏ\n"
+        "👤 <b>User Commands:</b>\n"
+        "• /start — Start the bot\n"
+        "• /id — Get your info\n\n"
+        "⚙️ <b>Group Settings:</b>\n"
+        "• /chatbot on — AI Enable\n"
+        "• /chatbot off — AI Disable\n\n"
+        "➜ 24x7 Fᴀꜱᴛ Rᴇꜱᴩᴏɴꜱᴇ\n"
         f"</blockquote>"
     )
 
     back_button = [[InlineKeyboardButton("⬅️ Bᴀᴄᴋ", callback_data="back_start")]]
     
-    await query.edit_message_caption(
-        caption=help_text,
-        reply_markup=InlineKeyboardMarkup(back_button),
-        parse_mode="HTML"
-    )
+    # Check karein ki command se khula hai ya button se
+    if update.callback_query:
+        await update.callback_query.edit_message_caption(
+            caption=help_text,
+            reply_markup=InlineKeyboardMarkup(back_button),
+            parse_mode="HTML"
+        )
+    else:
+        # Agar koi /help type kare toh
+        await update.message.reply_text(
+            help_text, 
+            reply_markup=InlineKeyboardMarkup(back_button), 
+            parse_mode="HTML"
+        )
 
+# =========================================
+# ✶ CALLBACK HANDLER (MAIN SWITCH)
+# =========================================
 async def help_button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    # Yahan check ho raha hai kaunsa button daba
-    if query.data == "back_start":
-        await start(update, context)
-    elif query.data == "help_menu":
+    
+    # Button click ka response turant answer karein
+    await query.answer()
+
+    if query.data == "help_menu":
         await help_menu(update, context)
+    elif query.data == "back_start":
+        await start(update, context)
