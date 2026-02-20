@@ -1,47 +1,61 @@
 from telegram import Update, ChatPermissions
 from telegram.ext import ContextTypes
 import time
+from smartchatbot.config import LOGGER_GROUP  # Optional: aapka logger chat id
 
+# ----------------------------
+# ANTI-NSFW HANDLER
+# ----------------------------
 async def anti_nsfw_logic(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
 
+    user = update.effective_user
+    chat = update.effective_chat
+
     # Check for Media (Photo, Video, Sticker, GIF/Animation)
     is_media = (
-        update.message.photo or 
-        update.message.video or 
-        update.message.sticker or 
-        update.message.animation
+        bool(update.message.photo) or
+        bool(update.message.video) or
+        bool(update.message.sticker) or
+        bool(update.message.animation)
     )
 
-    if is_media:
-        # Note: AI Image Recognition ke liye extra API lagti hai, 
-        # par hum yahan "Strict Mode" ya NSFW metadata check filter laga rahe hain.
-        # Agar aap chahte ho ki har media delete ho ya AI check kare:
-        
-        user = update.effective_user
-        chat = update.effective_chat
-        
-        try:
-            # 1. Message Delete Karo
-            await update.message.delete()
-            
-            # 2. User ko Mute Karo (Restrict)
-            # User ab message, media ya kuch bhi nahi bhej payega
-            mute_permissions = ChatPermissions(can_send_messages=False)
-            await context.bot.restrict_chat_member(
-                chat_id=chat.id,
-                user_id=user.id,
-                permissions=mute_permissions,
-                until_date=int(time.time() + 86400) # 24 ghante ke liye mute
-            )
-            
-            # 3. Warning Message
-            await context.bot.send_message(
-                chat_id=chat.id,
-                text=f"🚫 **Action Taken!**\n\nUser: {user.first_name}\nReason: NSFW/18+ Content detected.\nAction: Message Deleted & User Muted for 24h. 🤐"
-            )
-            
-        except Exception as e:
-            print(f"Error in Anti-NSFW: {e}")
+    if not is_media:
+        return  # Agar media nahi, kuch nahi karna
 
+    try:
+        # 1️⃣ Delete the NSFW message
+        await update.message.delete()
+
+        # 2️⃣ Restrict user for 24h
+        mute_permissions = ChatPermissions(can_send_messages=False)
+        until_ts = int(time.time() + 86400)  # 24 hours
+        await context.bot.restrict_chat_member(
+            chat_id=chat.id,
+            user_id=user.id,
+            permissions=mute_permissions,
+            until_date=until_ts
+        )
+
+        # 3️⃣ Warning Message
+        warn_text = (
+            f"🚫 **Action Taken!**\n\n"
+            f"User: {user.first_name}\n"
+            "Reason: NSFW/18+ Media detected.\n"
+            "Action: Message Deleted & User Muted for 24h 🤐"
+        )
+        await context.bot.send_message(chat_id=chat.id, text=warn_text, parse_mode="Markdown")
+
+        # 4️⃣ Optional: Logger Group
+        if LOGGER_GROUP:
+            try:
+                await context.bot.send_message(
+                    chat_id=LOGGER_GROUP,
+                    text=f"⚠️ NSFW Action\nChat: {chat.title} ({chat.id})\nUser: {user.first_name} ({user.id})\nTime: {time.ctime()}"
+                )
+            except:
+                pass
+
+    except Exception as e:
+        print(f"Error in Anti-NSFW Handler: {e}")
