@@ -3,7 +3,7 @@ import random
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from .config import Config
+from ..config import Config
 
 # Bot startup time (Isse main file mein define karein ya import karein)
 start_time = datetime.now()
