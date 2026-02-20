@@ -12,10 +12,10 @@ from telegram.ext import (
 )
 
 # ==========================================
-# ✶ ABSOLUTE IMPORTS (Final Fix for Heroku)
+# ✶ FIXED ABSOLUTE IMPORTS
 # ==========================================
-# Hum 'smartchatbot' package name use kar rahe hain taaki 
-# Heroku ko file location mil sake.
+# Heroku par jab hum '-m smartchatbot' chalate hain, 
+# toh humein package name ke saath import karna padta hai.
 from smartchatbot.config import Config
 from smartchatbot.database import register_user
 from smartchatbot.modules.start import start, help_menu, help_button_callback
