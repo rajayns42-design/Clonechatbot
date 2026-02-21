@@ -60,8 +60,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "────── ⋅ ⋅ ────── ⋅ ⋅ ⋅ \n"
         "๏ 𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘 𝗠𝗘 ?\n"
         "➜ Aᴅᴅ Mᴇ Bᴀʙʏ ʏᴏᴜʀ Gʀᴏᴜᴩ\n"
-        "➜ Uꜱᴇ /Chatbot Oɴ ᴛᴏ Eɴᴀʙʟᴇ\n\n"
-        "➜ Uꜱᴇ /Chatbot σꜰꜰ ᴛᴏ Dɪꜱᴀʙʟᴇ\n\n"
+        "➜ Uꜱᴇ /Chatbot Oɴ ᴛᴏ Eɴᴀʙʟᴇ\n"
+        "➜ Uꜱᴇ /Chatbot σꜰꜰ ᴛᴏ Dɪꜱᴀʙʟᴇ\n"
+        "────── ⋅ ⋅ ────── ⋅ ⋅ ⋅ \n"
         "➜ Cʟɪᴄᴋ Tʜᴇ Hᴇʟᴩ Bᴜᴛᴛᴏɴ Fᴏʀ Mᴏʀᴇ 🫶\n"
         f"</blockquote>"
     )
