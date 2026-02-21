@@ -45,16 +45,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if photos.total_count > 0:
             chat_photo = photos.photos[0][-1].file_id
     except:
-        pass
+        pass hu
+        
 
     START_TEXT = (
         f"<blockquote>\n"
         f"𝖧𝖾𝗒 <a href='tg://user?id={user.id}'>{user.first_name}</a> ✨\n"
         f"I'ᴍ <b>{bot.first_name}</b>\n\n"
+        "────── ⋅ ⋅ ────── ⋅ ⋅ ⋅ \n"
         "๏ 𝗪𝗵𝗮𝘁 𝗖𝗮𝗻 𝗜 𝗗𝗼 ?\n"
         "➜ I'ᴍ A Sᴍᴀʀᴛ Aɪ Cʜᴀᴛ Aꜱꜱɪꜱᴛᴀɴᴛ\n"
         "➜ Hᴜᴍᴀɴ-Lɪᴋᴇ Rᴇᴩʟʏ\n"
         "➜ Mᴜʟᴛɪ Lᴀɴɢᴜᴀɢᴇ Sᴜᴩᴩᴏʀᴛ\n\n"
+        "────── ⋅ ⋅ ────── ⋅ ⋅ ⋅ \n"
         "๏ 𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘 𝗠𝗘 ?\n"
         "➜ Aᴅᴅ Mᴇ Bᴀʙʏ ʏᴏᴜʀ Gʀᴏᴜᴩ\n"
         "➜ Uꜱᴇ /Chatbot Oɴ ᴛᴏ Eɴᴀʙʟᴇ\n\n"
