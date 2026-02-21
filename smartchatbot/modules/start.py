@@ -45,7 +45,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if photos.total_count > 0:
             chat_photo = photos.photos[0][-1].file_id
     except:
-        pass hu
+        pass 
         
 
     START_TEXT = (
